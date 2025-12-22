@@ -1,0 +1,240 @@
+# 要件定義: Okina変化監視システム
+
+metadata:
+  title: "Okina変化監視システム"
+  feature: "change-monitor"
+  status: "draft"
+  created: "2025-12-22"
+  updated: "2025-12-22"
+  version: "1.0.0"
+  last_validated: null
+  validation_passed: null
+  complexity: "medium"
+  estimated-hours: 10
+  dependencies: ["diff-analyzer", "notification-system"]
+
+overview:
+  description: |
+    Okinaの変化監視システム。Input Providerが生成した正規化データを監視し、
+    差分抽出システムと通知システムを統合制御する。Okinaの設計哲学
+    「静かに見守り、前と違えば知らせ、判断は人に委ねる」を体現する
+    中核コンポーネントとして、全体の処理フローを管理する。
+  background: |
+    Okinaは③変化検知、④差分抽出、⑤通知の3つの責務を担う。
+    変化監視システムは、これらを統合し、Input Providerからの
+    正規化データを起点として、一連の処理を制御する。
+    翁のような存在として、静かに、しかし確実に変化を見守り、
+    必要な時のみ適切に通知を行う。
+  goals:
+    - "Input Providerからの正規化データ監視"
+    - "差分抽出システムとの統合制御"
+    - "通知システムとの統合制御"
+    - "エラー時の適切な処理と通知"
+    - "設定管理と検証"
+
+acceptance-criteria:
+  - id: "AC-001"
+    title: "正規化データの監視"
+    priority: "high"
+    type: "functional"
+    description: |
+      指定されたディレクトリの正規化データファイル（*.jsonl）を
+      監視し、処理対象を特定できる
+    when: "データディレクトリに正規化データファイルが存在する時"
+    then: "ファイルパターンに一致するファイルが処理対象として特定される"
+    examples:
+      - input: "data/input/fortinet.jsonl, cisco.jsonl"
+        output: "2つのソースファイルを処理対象として特定"
+      - input: "data/input/ (空ディレクトリ)"
+        output: "データなし異常として通知"
+
+  - id: "AC-002"
+    title: "差分抽出システムとの統合"
+    priority: "high"
+    type: "functional"
+    description: |
+      各ソースファイルに対して差分抽出システムを呼び出し、
+      変化検知結果を取得できる
+    when: "正規化データファイルが処理される時"
+    then: "差分抽出システムが呼び出され、変化検知結果が取得される"
+    examples:
+      - input: "fortinet.jsonl (新規追加2件)"
+        output: "diff_result: {added: 2件, removed: 0件, changed: 0件}"
+      - input: "cisco.jsonl (変更なし)"
+        output: "diff_result: {added: 0件, removed: 0件, changed: 0件}"
+
+  - id: "AC-003"
+    title: "通知システムとの統合"
+    priority: "high"
+    type: "functional"
+    description: |
+      変化が検知された場合、通知システムを呼び出して
+      適切に通知を送信できる
+    when: "差分抽出で変化が検知された時"
+    then: "通知システムが呼び出され、変化通知が送信される"
+    examples:
+      - input: "added: 2件, changed: 1件"
+        output: "変化通知が送信される"
+      - input: "変化なし"
+        output: "通知は送信されない"
+
+  - id: "AC-004"
+    title: "エラー時の通知"
+    priority: "high"
+    type: "functional"
+    description: |
+      システム異常（データなし、処理エラー、例外）が発生した場合、
+      通知システムを通じて異常通知を送信できる
+    when: "システム異常が発生した時"
+    then: "異常通知が送信される"
+    examples:
+      - input: "正規化データが0件"
+        output: "データ取得異常として通知"
+      - input: "差分抽出でエラー"
+        output: "システム異常として通知"
+
+  - id: "AC-005"
+    title: "複数ソースの処理"
+    priority: "medium"
+    type: "functional"
+    description: |
+      複数のソースファイルが存在する場合、
+      各ソースを独立して処理できる
+    when: "複数の正規化データファイルが存在する時"
+    then: "各ソースが独立して処理され、結果が統合される"
+    examples:
+      - input: "fortinet.jsonl, cisco.jsonl, vmware.jsonl"
+        output: "3つのソースが独立処理され、結果が統合通知"
+
+  - id: "AC-006"
+    title: "設定管理と検証"
+    priority: "medium"
+    type: "functional"
+    description: |
+      設定ファイル（settings.yml）を読み込み、
+      設定内容を検証して適切に処理できる
+    when: "変化監視が開始される時"
+    then: "設定が読み込まれ、検証され、適切に適用される"
+    examples:
+      - input: "正常な設定ファイル"
+        output: "設定が適用され、処理開始"
+      - input: "不正な設定ファイル"
+        output: "設定エラーとして通知、処理中断"
+
+  - id: "AC-007"
+    title: "処理状況の記録"
+    priority: "medium"
+    type: "functional"
+    description: |
+      処理の開始・終了・エラーを適切にログに記録し、
+      デバッグや運用監視に活用できる
+    when: "各処理段階で"
+    then: "適切なレベルでログが記録される"
+    examples:
+      - input: "処理開始"
+        output: "INFO: 変化監視を開始します"
+      - input: "エラー発生"
+        output: "ERROR: 差分抽出でエラーが発生しました"
+
+  - id: "AC-008"
+    title: "翁らしい振る舞い"
+    priority: "low"
+    type: "functional"
+    description: |
+      処理全体を通じて、翁らしく静かで控えめな振る舞いを保ち、
+      過度な出力や判断的なメッセージを避ける
+    when: "全ての処理において"
+    then: "静かで控えめ、事実のみの出力となる"
+    examples:
+      - input: "変化検知完了"
+        output: "静かに処理完了、必要時のみ通知"
+      - input: "エラー発生"
+        output: "控えめなエラー報告、判断は人に委ねる"
+
+non-functional-requirements:
+  performance:
+    - "複数ソース処理が並列実行可能"
+    - "全体処理時間が各ソース処理時間の合計+10秒以内"
+    - "メモリ使用量が適切に管理される"
+  reliability:
+    - "一部ソースのエラーが他ソースに影響しない"
+    - "システム異常時も適切に通知される"
+    - "設定エラー時も安全に処理が停止される"
+  maintainability:
+    - "新しいソース形式に容易に対応"
+    - "処理フローが理解しやすい"
+    - "デバッグ情報が充実"
+  usability:
+    - "設定が直感的で分かりやすい"
+    - "エラーメッセージが具体的"
+    - "処理状況が適切に表示"
+  observability:
+    - "処理の各段階がログで追跡可能"
+    - "パフォーマンス情報が記録される"
+    - "エラー原因が特定しやすい"
+
+constraints:
+  - "Okinaの設計哲学（主役ではない、判断しない）を遵守"
+  - "差分抽出システムと通知システムに依存"
+  - "Python 3.10+以上"
+  - "設定ファイル（YAML）による制御"
+  - "定期実行（cron等）を前提とした設計"
+
+assumptions:
+  - "Input Providerが適切な正規化データを生成"
+  - "設定ファイルが適切に配置されている"
+  - "データディレクトリが存在し、アクセス可能"
+  - "差分抽出システムと通知システムが正常動作"
+  - "ファイルシステムが利用可能"
+
+risks:
+  - risk: "Input Providerの異常による無限待機"
+    mitigation: "タイムアウト設定と異常検知"
+    probability: "medium"
+    impact: "medium"
+  
+  - risk: "複数ソース処理での部分失敗"
+    mitigation: "独立処理と部分成功の通知"
+    probability: "medium"
+    impact: "low"
+  
+  - risk: "設定ファイル破損による処理停止"
+    mitigation: "設定検証とデフォルト値"
+    probability: "low"
+    impact: "medium"
+  
+  - risk: "ログファイル肥大化"
+    mitigation: "ログローテーションと適切なレベル設定"
+    probability: "medium"
+    impact: "low"
+
+scope:
+  in-scope:
+    - "正規化データファイルの監視"
+    - "差分抽出システムとの統合制御"
+    - "通知システムとの統合制御"
+    - "複数ソースの独立処理"
+    - "設定管理と検証"
+    - "エラーハンドリングと異常通知"
+    - "処理状況のログ記録"
+  
+  out-of-scope:
+    - "正規化データの生成（Input Providerの責務）"
+    - "差分抽出の詳細ロジック（差分抽出システムの責務）"
+    - "通知の詳細処理（通知システムの責務）"
+    - "リアルタイム監視（定期実行前提）"
+    - "Input Providerの制御・管理"
+    - "Webインターフェース"
+
+success-metrics:
+  quantitative:
+    - "テストカバレッジ90%以上を維持"
+    - "複数ソース処理の並列実行効率90%以上"
+    - "エラー時の通知成功率95%以上"
+    - "新規テスト20件以上を追加"
+  
+  qualitative:
+    - "処理フローが翁らしく静かで控えめ"
+    - "エラー時も適切に処理が継続される"
+    - "設定が分かりやすく管理しやすい"
+    - "ログが運用監視に有用"

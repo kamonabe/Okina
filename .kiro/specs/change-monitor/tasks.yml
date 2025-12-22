@@ -1,0 +1,453 @@
+# タスク管理: Okina変化監視システム
+
+metadata:
+  title: "Okina変化監視システム"
+  feature: "change-monitor"
+  status: "draft"
+  created: "2025-12-22"
+  updated: "2025-12-22"
+  version: "1.0.0"
+
+implementation-tasks:
+  - id: "TASK-001"
+    title: "ConfigManagerクラスの実装"
+    priority: "high"
+    status: "pending"
+    estimated-hours: 2
+    dependencies: []
+    description: |
+      設定ファイル（YAML）の読み込みと検証を行う
+      ConfigManagerクラスを実装する。
+    acceptance-criteria:
+      - "YAML設定ファイルの読み込み"
+      - "設定項目の検証"
+      - "環境変数の解決"
+      - "デフォルト値の適用"
+      - "設定エラーの適切な処理"
+    files-to-create:
+      - "src/okina/monitor.py (ConfigManager部分)"
+    files-to-modify: []
+    tests-to-create:
+      - "tests/test_monitor_unit.py (test_config_management)"
+    validation:
+      - "正常な設定ファイルが読み込める"
+      - "不正な設定でエラーが発生する"
+      - "環境変数が適切に解決される"
+
+  - id: "TASK-002"
+    title: "DataWatcherクラスの実装"
+    priority: "high"
+    status: "pending"
+    estimated-hours: 2
+    dependencies: []
+    description: |
+      正規化データファイルの監視と検出を行う
+      DataWatcherクラスを実装する。
+    acceptance-criteria:
+      - "ファイルパターンによるファイル検索"
+      - "ソース名の抽出"
+      - "ファイル存在チェック"
+      - "アクセス権限チェック"
+      - "空ディレクトリの適切な処理"
+    files-to-create:
+      - "src/okina/monitor.py (DataWatcher部分)"
+    files-to-modify: []
+    tests-to-create:
+      - "tests/test_monitor_unit.py (test_data_file_detection)"
+    validation:
+      - "ファイルパターンで正しく検索される"
+      - "ソース名が適切に抽出される"
+      - "存在しないディレクトリでエラー処理される"
+
+  - id: "TASK-003"
+    title: "ProcessControllerクラスの実装"
+    priority: "high"
+    status: "pending"
+    estimated-hours: 3
+    dependencies: ["TASK-001", "TASK-002"]
+    description: |
+      差分抽出と通知の統合制御を行う
+      ProcessControllerクラスを実装する。
+    acceptance-criteria:
+      - "差分抽出システムとの統合"
+      - "通知システムとの統合"
+      - "処理結果の評価と判定"
+      - "エラー時の適切な処理"
+      - "処理時間の測定"
+    files-to-create:
+      - "src/okina/monitor.py (ProcessController部分)"
+    files-to-modify: []
+    tests-to-create:
+      - "tests/test_monitor_unit.py (統合関連テスト)"
+    validation:
+      - "差分抽出が正しく呼び出される"
+      - "変化時に通知が送信される"
+      - "エラー時に異常通知が送信される"
+
+  - id: "TASK-004"
+    title: "ErrorHandlerクラスの実装"
+    priority: "high"
+    status: "pending"
+    estimated-hours: 2
+    dependencies: []
+    description: |
+      エラー処理と異常通知を統合管理する
+      ErrorHandlerクラスを実装する。
+    acceptance-criteria:
+      - "エラー種別の判定"
+      - "適切なログレベルでの記録"
+      - "異常通知の送信"
+      - "処理継続の判定"
+      - "翁らしいエラーメッセージ"
+    files-to-create:
+      - "src/okina/monitor.py (ErrorHandler部分)"
+    files-to-modify: []
+    tests-to-create:
+      - "tests/test_monitor_unit.py (test_error_handling)"
+    validation:
+      - "エラーが適切に分類される"
+      - "異常通知が確実に送信される"
+      - "エラーメッセージが翁らしい"
+
+  - id: "TASK-005"
+    title: "ChangeMonitorクラスの実装"
+    priority: "high"
+    status: "pending"
+    estimated-hours: 4
+    dependencies: ["TASK-001", "TASK-002", "TASK-003", "TASK-004"]
+    description: |
+      変化監視システム全体を統合管理する
+      ChangeMonitorクラスを実装する。
+    acceptance-criteria:
+      - "run()メインメソッドの実装"
+      - "各コンポーネントの統合"
+      - "複数ソースの独立処理"
+      - "処理結果の統合"
+      - "翁らしい振る舞いの実現"
+    files-to-create:
+      - "src/okina/monitor.py (ChangeMonitor部分)"
+    files-to-modify: []
+    tests-to-create:
+      - "tests/test_monitor_integration.py"
+    validation:
+      - "エンドツーエンドで変化監視が動作する"
+      - "複数ソースが独立処理される"
+      - "翁らしい静かな振る舞いが実現される"
+
+  - id: "TASK-006"
+    title: "プロパティベーステストの実装"
+    priority: "medium"
+    status: "pending"
+    estimated-hours: 2
+    dependencies: ["TASK-001", "TASK-002", "TASK-003", "TASK-004", "TASK-005"]
+    description: |
+      hypothesisを使用したプロパティベーステストを実装し、
+      変化監視システムの不変条件を検証する。
+    acceptance-criteria:
+      - "処理の原子性テスト"
+      - "設定検証の完全性テスト"
+      - "エラー通知の確実性テスト"
+      - "ログ記録の一貫性テスト"
+    files-to-create:
+      - "tests/test_monitor_properties.py"
+    files-to-modify: []
+    tests-to-create:
+      - "tests/test_monitor_properties.py (全プロパティテスト)"
+    validation:
+      - "プロパティテストが全てパス"
+      - "不変条件が適切に検証される"
+      - "エッジケースが発見・修正される"
+
+  - id: "TASK-007"
+    title: "CLIインターフェースの実装"
+    priority: "medium"
+    status: "pending"
+    estimated-hours: 2
+    dependencies: ["TASK-005"]
+    description: |
+      コマンドライン実行のためのCLIインターフェースを実装する。
+    acceptance-criteria:
+      - "okina checkコマンドの実装"
+      - "okina statusコマンドの実装"
+      - "コマンドライン引数の処理"
+      - "適切なエラーメッセージ"
+      - "翁らしい出力形式"
+    files-to-create:
+      - "src/okina/cli.py"
+    files-to-modify:
+      - "scripts/check.py"
+    tests-to-create:
+      - "tests/test_cli.py"
+    validation:
+      - "コマンドラインから正常に実行される"
+      - "引数が適切に処理される"
+      - "出力が翁らしく静かで控えめ"
+
+  - id: "TASK-008"
+    title: "設定統合とドキュメント更新"
+    priority: "medium"
+    status: "pending"
+    estimated-hours: 2
+    dependencies: ["TASK-005"]
+    description: |
+      変化監視システムの設定をsettings.yml.sampleに統合し、
+      ドキュメントを更新する。
+    acceptance-criteria:
+      - "settings.yml.sampleの変化監視設定追加"
+      - "README.mdの変化監視説明更新"
+      - "設定項目の説明追加"
+      - "使用例の追加"
+    files-to-create: []
+    files-to-modify:
+      - "config/settings.yml.sample"
+      - "README.md"
+      - "docs/CHANGE_MONITOR_GUIDE.md (新規作成)"
+    tests-to-create: []
+    validation:
+      - "設定例が実際に動作する"
+      - "ドキュメントが分かりやすい"
+      - "設定項目の説明が適切"
+
+testing-tasks:
+  - id: "TEST-001"
+    title: "ユニットテストの実装"
+    priority: "high"
+    status: "pending"
+    estimated-hours: 3
+    dependencies: ["TASK-001", "TASK-002", "TASK-003", "TASK-004", "TASK-005"]
+    description: |
+      変化監視システムの各コンポーネントのユニットテストを実装する。
+    test-files:
+      - "tests/test_monitor_unit.py"
+    test-cases:
+      - "test_config_management"
+      - "test_data_file_detection"
+      - "test_diff_analyzer_integration"
+      - "test_notification_integration"
+      - "test_error_handling"
+      - "test_source_processing"
+      - "test_result_aggregation"
+    coverage-target: "90%"
+
+  - id: "TEST-002"
+    title: "統合テストの実装"
+    priority: "high"
+    status: "pending"
+    estimated-hours: 3
+    dependencies: ["TASK-005"]
+    description: |
+      変化監視システム全体の統合テストを実装する。
+    test-files:
+      - "tests/test_monitor_integration.py"
+    test-cases:
+      - "test_end_to_end_monitoring_flow"
+      - "test_error_handling_and_multi_source"
+      - "test_config_management_and_logging"
+      - "test_partial_failure_scenarios"
+      - "test_notification_integration"
+    coverage-target: "85%"
+
+  - id: "TEST-003"
+    title: "プロパティベーステストの実装"
+    priority: "medium"
+    status: "pending"
+    estimated-hours: 2
+    dependencies: ["TASK-001", "TASK-002", "TASK-003", "TASK-004", "TASK-005"]
+    description: |
+      hypothesisを使用したプロパティベーステストを実装する。
+    test-files:
+      - "tests/test_monitor_properties.py"
+    test-cases:
+      - "test_processing_atomicity"
+      - "test_config_validation_completeness"
+      - "test_error_notification_reliability"
+      - "test_logging_consistency"
+    coverage-target: "80%"
+
+  - id: "TEST-004"
+    title: "CLIテストの実装"
+    priority: "medium"
+    status: "pending"
+    estimated-hours: 2
+    dependencies: ["TASK-007"]
+    description: |
+      CLIインターフェースのテストを実装する。
+    test-files:
+      - "tests/test_cli.py"
+    test-cases:
+      - "test_check_command"
+      - "test_status_command"
+      - "test_command_line_arguments"
+      - "test_error_scenarios"
+      - "test_output_format"
+    coverage-target: "85%"
+
+documentation-tasks:
+  - id: "DOC-001"
+    title: "変化監視ガイドの作成"
+    priority: "medium"
+    status: "pending"
+    estimated-hours: 2
+    dependencies: ["TASK-008"]
+    description: |
+      変化監視システムの使用方法を詳しく説明するガイドを作成する。
+    files-to-create:
+      - "docs/CHANGE_MONITOR_GUIDE.md"
+    content:
+      - "変化監視の仕組み"
+      - "設定方法"
+      - "コマンドライン使用法"
+      - "トラブルシューティング"
+
+  - id: "DOC-002"
+    title: "運用ガイドの作成"
+    priority: "medium"
+    status: "pending"
+    estimated-hours: 2
+    dependencies: ["TASK-005"]
+    description: |
+      Okinaの運用方法を説明するガイドを作成する。
+    files-to-create:
+      - "docs/OPERATIONS_GUIDE.md"
+    content:
+      - "定期実行の設定"
+      - "ログ管理"
+      - "監視とアラート"
+      - "メンテナンス手順"
+
+  - id: "DOC-003"
+    title: "API仕様書の作成"
+    priority: "low"
+    status: "pending"
+    estimated-hours: 1
+    dependencies: ["TASK-005"]
+    description: |
+      変化監視システムのAPI仕様書を作成する。
+    files-to-create:
+      - "docs/CHANGE_MONITOR_API.md"
+    content:
+      - "ChangeMonitorクラスの仕様"
+      - "各コンポーネントクラスの仕様"
+      - "データ構造の定義"
+      - "エラーコードの定義"
+
+validation-tasks:
+  - id: "VAL-001"
+    title: "要件適合性の検証"
+    priority: "high"
+    status: "pending"
+    estimated-hours: 2
+    dependencies: ["TASK-001", "TASK-002", "TASK-003", "TASK-004", "TASK-005", "TEST-001", "TEST-002"]
+    description: |
+      実装が要件定義に適合しているかを検証する。
+    validation-items:
+      - "AC-001: 正規化データの監視"
+      - "AC-002: 差分抽出システムとの統合"
+      - "AC-003: 通知システムとの統合"
+      - "AC-004: エラー時の通知"
+      - "AC-005: 複数ソースの処理"
+      - "AC-006: 設定管理と検証"
+      - "AC-007: 処理状況の記録"
+      - "AC-008: 翁らしい振る舞い"
+
+  - id: "VAL-002"
+    title: "パフォーマンス検証"
+    priority: "medium"
+    status: "pending"
+    estimated-hours: 1
+    dependencies: ["TASK-005"]
+    description: |
+      変化監視システムのパフォーマンス要件を検証する。
+    performance-targets:
+      - "複数ソース処理時間が適切"
+      - "並列処理効率90%以上"
+      - "メモリ使用量が適切に管理される"
+    measurement-tools:
+      - "pytest-benchmark"
+      - "memory_profiler"
+      - "time.perf_counter()"
+
+  - id: "VAL-003"
+    title: "翁らしさの検証"
+    priority: "medium"
+    status: "pending"
+    estimated-hours: 1
+    dependencies: ["TASK-005", "TASK-007"]
+    description: |
+      システム全体の振る舞いが翁らしいかを検証する。
+    validation-criteria:
+      - "出力が静かで控えめ"
+      - "判断的でない事実のみの内容"
+      - "エラーメッセージが適切"
+      - "ログが過度でない"
+    validation-method:
+      - "手動レビュー"
+      - "出力内容の確認"
+      - "メッセージトーンの評価"
+
+milestones:
+  - name: "M1: コア機能実装完了"
+    date: "2025-12-25"
+    tasks: ["TASK-001", "TASK-002", "TASK-003", "TASK-004", "TASK-005"]
+    deliverables:
+      - "ConfigManagerクラス"
+      - "DataWatcherクラス"
+      - "ProcessControllerクラス"
+      - "ErrorHandlerクラス"
+      - "ChangeMonitorクラス"
+
+  - name: "M2: インターフェース実装完了"
+    date: "2025-12-26"
+    tasks: ["TASK-007", "TEST-004"]
+    deliverables:
+      - "CLIインターフェース"
+      - "コマンドライン実行"
+
+  - name: "M3: テスト実装完了"
+    date: "2025-12-27"
+    tasks: ["TEST-001", "TEST-002", "TEST-003"]
+    deliverables:
+      - "ユニットテスト"
+      - "統合テスト"
+      - "プロパティベーステスト"
+
+  - name: "M4: ドキュメント・検証完了"
+    date: "2025-12-28"
+    tasks: ["TASK-008", "DOC-001", "DOC-002", "VAL-001", "VAL-002", "VAL-003"]
+    deliverables:
+      - "設定統合"
+      - "変化監視ガイド"
+      - "運用ガイド"
+      - "要件適合性検証"
+      - "翁らしさ検証"
+
+risks-and-mitigations:
+  - risk: "差分抽出・通知システムとの統合複雑性"
+    probability: "medium"
+    impact: "medium"
+    mitigation: "インターフェース設計の明確化と早期統合テスト"
+    
+  - risk: "複数ソース処理での予期しない相互作用"
+    probability: "low"
+    impact: "medium"
+    mitigation: "独立処理の徹底とプロパティベーステスト"
+    
+  - risk: "翁らしさの主観的評価"
+    probability: "medium"
+    impact: "low"
+    mitigation: "明確な基準設定と継続的なレビュー"
+    
+  - risk: "設定管理の複雑化"
+    probability: "low"
+    impact: "medium"
+    mitigation: "シンプルな設定構造と充実した検証"
+
+success-criteria:
+  - "全ての受け入れ基準（AC-001〜AC-008）が満たされている"
+  - "テストカバレッジが90%以上"
+  - "パフォーマンス要件が満たされている"
+  - "プロパティベーステストが全てパス"
+  - "実際の変化監視が正確に動作する"
+  - "翁らしい振る舞いが実現されている"
+  - "コマンドラインから正常に実行される"
+  - "複数ソースが独立して処理される"

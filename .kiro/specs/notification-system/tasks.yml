@@ -1,0 +1,304 @@
+# タスク管理: Okina通知システム
+
+metadata:
+  title: "Okina通知システム"
+  feature: "notification-system"
+  status: "draft"
+  created: "2025-12-22"
+  updated: "2025-12-22"
+  version: "1.0.0"
+
+implementation-tasks:
+  - id: "TASK-001"
+    title: "MessageFormatterクラスの実装"
+    priority: "high"
+    status: "pending"
+    estimated-hours: 3
+    dependencies: []
+    description: |
+      変化検知結果とシステム異常から通知メッセージを生成する
+      MessageFormatterクラスを実装する。
+    acceptance-criteria:
+      - "format_change_message()メソッドの実装"
+      - "format_error_message()メソッドの実装"
+      - "翁らしい静かで簡潔なメッセージ生成"
+      - "テンプレートベースのメッセージ生成"
+    files-to-create:
+      - "src/okina/notification.py (MessageFormatter部分)"
+    files-to-modify: []
+    tests-to-create:
+      - "tests/test_notification_unit.py (test_change_message_formatting)"
+      - "tests/test_notification_unit.py (test_message_tone_and_style)"
+    validation:
+      - "メッセージが翁らしい口調になっている"
+      - "判断的でない事実のみの内容"
+      - "絵文字を適切に使用"
+
+  - id: "TASK-002"
+    title: "プラットフォーム別通知クラスの実装"
+    priority: "high"
+    status: "pending"
+    estimated-hours: 4
+    dependencies: ["TASK-001"]
+    description: |
+      Slack、Discord、Teams、Email の各プラットフォーム向けの
+      通知送信クラスを実装する。
+    acceptance-criteria:
+      - "SlackNotifierクラスの実装"
+      - "DiscordNotifierクラスの実装"
+      - "TeamsNotifierクラスの実装"
+      - "EmailNotifierクラスの実装"
+      - "統一されたインターフェース"
+    files-to-create:
+      - "src/okina/notification.py (Notifierクラス群)"
+    files-to-modify: []
+    tests-to-create:
+      - "tests/test_notification_unit.py (各プラットフォームのテスト)"
+    validation:
+      - "各プラットフォームで正常に送信される"
+      - "エラー時も適切に処理される"
+      - "タイムアウト設定が適切"
+
+  - id: "TASK-003"
+    title: "NotificationManagerクラスの実装"
+    priority: "high"
+    status: "pending"
+    estimated-hours: 3
+    dependencies: ["TASK-001", "TASK-002"]
+    description: |
+      通知システム全体を統合管理するNotificationManagerクラスを実装する。
+      設定管理、環境変数解決、エラーハンドリングを含む。
+    acceptance-criteria:
+      - "send_change_notification()メソッドの実装"
+      - "send_error_notification()メソッドの実装"
+      - "環境変数解決機能"
+      - "設定検証機能"
+    files-to-create:
+      - "src/okina/notification.py (NotificationManager部分)"
+    files-to-modify: []
+    tests-to-create:
+      - "tests/test_notification_unit.py (test_env_var_resolution)"
+      - "tests/test_notification_integration.py"
+    validation:
+      - "環境変数が適切に解決される"
+      - "設定エラー時も処理が継続される"
+      - "複数プラットフォームに同時送信可能"
+
+  - id: "TASK-004"
+    title: "プロパティベーステストの実装"
+    priority: "medium"
+    status: "pending"
+    estimated-hours: 2
+    dependencies: ["TASK-001", "TASK-002", "TASK-003"]
+    description: |
+      hypothesisを使用したプロパティベーステストを実装し、
+      通知システムの不変条件を検証する。
+    acceptance-criteria:
+      - "メッセージ生成の一貫性テスト"
+      - "環境変数解決の安全性テスト"
+      - "通知内容の完全性テスト"
+      - "エラー処理の継続性テスト"
+    files-to-create:
+      - "tests/test_notification_properties.py"
+    files-to-modify: []
+    tests-to-create:
+      - "tests/test_notification_properties.py (全プロパティテスト)"
+    validation:
+      - "プロパティテストが全てパス"
+      - "不変条件が適切に検証される"
+      - "エッジケースが発見・修正される"
+
+  - id: "TASK-005"
+    title: "設定ファイル統合とドキュメント更新"
+    priority: "medium"
+    status: "pending"
+    estimated-hours: 2
+    dependencies: ["TASK-003"]
+    description: |
+      通知システムの設定をsettings.yml.sampleに統合し、
+      ドキュメントを更新する。
+    acceptance-criteria:
+      - "settings.yml.sampleの通知設定更新"
+      - "README.mdの通知設定説明更新"
+      - "環境変数の説明追加"
+      - "使用例の追加"
+    files-to-create: []
+    files-to-modify:
+      - "config/settings.yml.sample"
+      - "README.md"
+      - "docs/CONFIGURATION.md (新規作成)"
+    tests-to-create: []
+    validation:
+      - "設定例が実際に動作する"
+      - "ドキュメントが分かりやすい"
+      - "環境変数の説明が適切"
+
+testing-tasks:
+  - id: "TEST-001"
+    title: "ユニットテストの実装"
+    priority: "high"
+    status: "pending"
+    estimated-hours: 3
+    dependencies: ["TASK-001", "TASK-002", "TASK-003"]
+    description: |
+      通知システムの各コンポーネントのユニットテストを実装する。
+    test-files:
+      - "tests/test_notification_unit.py"
+    test-cases:
+      - "test_change_message_formatting"
+      - "test_error_message_formatting"
+      - "test_slack_notification"
+      - "test_discord_notification"
+      - "test_teams_notification"
+      - "test_email_notification"
+      - "test_env_var_resolution"
+      - "test_message_tone_and_style"
+    coverage-target: "95%"
+
+  - id: "TEST-002"
+    title: "統合テストの実装"
+    priority: "high"
+    status: "pending"
+    estimated-hours: 2
+    dependencies: ["TASK-003"]
+    description: |
+      通知システム全体の統合テストを実装する。
+    test-files:
+      - "tests/test_notification_integration.py"
+    test-cases:
+      - "test_end_to_end_notification_flow"
+      - "test_error_notification_flow"
+      - "test_error_handling_scenarios"
+      - "test_multiple_platform_notification"
+    coverage-target: "90%"
+
+  - id: "TEST-003"
+    title: "プロパティベーステストの実装"
+    priority: "medium"
+    status: "pending"
+    estimated-hours: 2
+    dependencies: ["TASK-001", "TASK-002", "TASK-003"]
+    description: |
+      hypothesisを使用したプロパティベーステストを実装する。
+    test-files:
+      - "tests/test_notification_properties.py"
+    test-cases:
+      - "test_message_generation_consistency"
+      - "test_env_var_resolution_safety"
+      - "test_notification_completeness"
+      - "test_error_handling_continuity"
+    coverage-target: "85%"
+
+documentation-tasks:
+  - id: "DOC-001"
+    title: "通知設定ガイドの作成"
+    priority: "medium"
+    status: "pending"
+    estimated-hours: 2
+    dependencies: ["TASK-005"]
+    description: |
+      通知システムの設定方法を詳しく説明するガイドを作成する。
+    files-to-create:
+      - "docs/NOTIFICATION_GUIDE.md"
+    content:
+      - "各プラットフォームの設定方法"
+      - "環境変数の設定例"
+      - "トラブルシューティング"
+      - "メッセージカスタマイズ"
+
+  - id: "DOC-002"
+    title: "API仕様書の作成"
+    priority: "low"
+    status: "pending"
+    estimated-hours: 1
+    dependencies: ["TASK-003"]
+    description: |
+      通知システムのAPI仕様書を作成する。
+    files-to-create:
+      - "docs/NOTIFICATION_API.md"
+    content:
+      - "NotificationManagerクラスの仕様"
+      - "MessageFormatterクラスの仕様"
+      - "各Notifierクラスの仕様"
+      - "データ構造の定義"
+
+validation-tasks:
+  - id: "VAL-001"
+    title: "要件適合性の検証"
+    priority: "high"
+    status: "pending"
+    estimated-hours: 1
+    dependencies: ["TASK-001", "TASK-002", "TASK-003", "TEST-001", "TEST-002"]
+    description: |
+      実装が要件定義に適合しているかを検証する。
+    validation-items:
+      - "AC-001: 変化検知結果の通知"
+      - "AC-002: 複数プラットフォーム対応"
+      - "AC-003: 環境変数による設定管理"
+      - "AC-004: 失敗時の通知"
+      - "AC-005: 翁らしいメッセージ"
+      - "AC-006: エラーハンドリング"
+
+  - id: "VAL-002"
+    title: "パフォーマンス検証"
+    priority: "medium"
+    status: "pending"
+    estimated-hours: 1
+    dependencies: ["TASK-003"]
+    description: |
+      通知システムのパフォーマンス要件を検証する。
+    performance-targets:
+      - "通知送信処理時間 < 10秒"
+      - "メッセージ生成処理時間 < 100ms"
+    measurement-tools:
+      - "pytest-benchmark"
+      - "time.perf_counter()"
+
+milestones:
+  - name: "M1: コア機能実装完了"
+    date: "2025-12-23"
+    tasks: ["TASK-001", "TASK-002", "TASK-003"]
+    deliverables:
+      - "MessageFormatterクラス"
+      - "各プラットフォーム通知クラス"
+      - "NotificationManagerクラス"
+
+  - name: "M2: テスト実装完了"
+    date: "2025-12-24"
+    tasks: ["TEST-001", "TEST-002", "TEST-003"]
+    deliverables:
+      - "ユニットテスト"
+      - "統合テスト"
+      - "プロパティベーステスト"
+
+  - name: "M3: ドキュメント・検証完了"
+    date: "2025-12-25"
+    tasks: ["TASK-005", "DOC-001", "VAL-001", "VAL-002"]
+    deliverables:
+      - "設定ファイル統合"
+      - "通知設定ガイド"
+      - "要件適合性検証"
+      - "パフォーマンス検証"
+
+risks-and-mitigations:
+  - risk: "外部サービスAPI変更"
+    probability: "low"
+    impact: "medium"
+    mitigation: "各プラットフォームの公式ドキュメント確認"
+    
+  - risk: "環境変数設定ミス"
+    probability: "medium"
+    impact: "medium"
+    mitigation: "設定検証機能と分かりやすいエラーメッセージ"
+    
+  - risk: "メッセージ内容の不適切さ"
+    probability: "low"
+    impact: "high"
+    mitigation: "翁らしさの明確な定義とレビュー"
+
+success-criteria:
+  - "全ての受け入れ基準（AC-001〜AC-006）が満たされている"
+  - "テストカバレッジが90%以上"
+  - "パフォーマンス要件が満たされている"
+  - "ドキュメントが完備されている"
+  - "実際の通知送信が正常に動作する"

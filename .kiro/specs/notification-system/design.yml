@@ -1,0 +1,453 @@
+# 設計書: Okina通知システム
+
+metadata:
+  title: "Okina通知システム"
+  feature: "notification-system"
+  status: "draft"
+  created: "2025-12-22"
+  updated: "2025-12-22"
+  version: "1.0.0"
+  last_validated: null
+  validation_passed: null
+
+architecture:
+  overview: |
+    Okina通知システムは3層構造で設計されている：
+    1. メッセージ生成層 - 変化検知結果から通知メッセージを生成
+    2. プラットフォーム送信層 - 各サービスAPIへの送信
+    3. 設定管理層 - セキュアな設定管理
+    
+    Okinaの設計哲学「静かに見守り、前と違えば知らせ、判断は人に委ねる」に
+    基づき、シンプルで信頼性の高い設計となっている。
+  
+  components:
+    - name: "NotificationManager"
+      type: "class"
+      responsibility: "通知システムの統合管理"
+      dependencies: ["requests", "smtplib", "email"]
+    
+    - name: "MessageFormatter"
+      type: "class"
+      responsibility: "通知メッセージの生成"
+      dependencies: []
+    
+    - name: "SlackNotifier"
+      type: "class"
+      responsibility: "Slack通知の送信"
+      dependencies: ["requests"]
+    
+    - name: "DiscordNotifier"
+      type: "class"
+      responsibility: "Discord通知の送信"
+      dependencies: ["requests"]
+    
+    - name: "TeamsNotifier"
+      type: "class"
+      responsibility: "Teams通知の送信"
+      dependencies: ["requests"]
+    
+    - name: "EmailNotifier"
+      type: "class"
+      responsibility: "メール通知の送信"
+      dependencies: ["smtplib", "email"]
+  
+  data-flow:
+    - from: "変化検知結果"
+      to: "メッセージ生成"
+      description: "差分データから通知メッセージを生成"
+    
+    - from: "メッセージ生成"
+      to: "設定解決"
+      description: "環境変数の解決と設定取得"
+    
+    - from: "設定解決"
+      to: "プラットフォーム送信"
+      description: "各サービスAPIへの送信"
+    
+    - from: "プラットフォーム送信"
+      to: "結果返却"
+      description: "送信結果の返却"
+
+modules:
+  - name: "notification"
+    path: "src/okina/notification.py"
+    description: |
+      Okina通知システムのメインモジュール。
+      変化検知結果の通知、システム異常の通知、
+      複数プラットフォームへの送信を担当する。
+    
+    classes:
+      - name: "NotificationManager"
+        description: "通知システムの統合管理クラス"
+        methods:
+          - name: "__init__"
+            parameters:
+              - name: "settings"
+                type: "dict"
+                description: "通知設定"
+            description: "通知マネージャーの初期化"
+          
+          - name: "send_change_notification"
+            parameters:
+              - name: "diff_result"
+                type: "dict"
+                description: "差分検知結果"
+              - name: "source"
+                type: "str"
+                description: "データソース名"
+            returns:
+              type: "bool"
+              description: "送信成功時True"
+            description: "変化検知結果の通知送信"
+          
+          - name: "send_error_notification"
+            parameters:
+              - name: "error_type"
+                type: "str"
+                description: "エラー種別"
+              - name: "error_message"
+                type: "str"
+                description: "エラーメッセージ"
+            returns:
+              type: "bool"
+              description: "送信成功時True"
+            description: "システム異常の通知送信"
+      
+      - name: "MessageFormatter"
+        description: "通知メッセージ生成クラス"
+        methods:
+          - name: "format_change_message"
+            parameters:
+              - name: "diff_result"
+                type: "dict"
+                description: "差分検知結果"
+              - name: "source"
+                type: "str"
+                description: "データソース名"
+            returns:
+              type: "str"
+              description: "フォーマット済みメッセージ"
+            description: "変化検知結果のメッセージ生成"
+          
+          - name: "format_error_message"
+            parameters:
+              - name: "error_type"
+                type: "str"
+                description: "エラー種別"
+              - name: "error_message"
+                type: "str"
+                description: "エラーメッセージ"
+            returns:
+              type: "str"
+              description: "フォーマット済みメッセージ"
+            description: "システム異常のメッセージ生成"
+
+correctness-properties:
+  - id: "P1"
+    title: "メッセージ生成の一貫性"
+    type: "invariant"
+    description: |
+      同じ差分検知結果からは常に同じメッセージが生成される。
+      メッセージは翁らしく静かで簡潔、判断的でない内容となる。
+    validates: ["AC-001", "AC-005"]
+    test-strategy: "property-based"
+    implementation:
+      framework: "hypothesis"
+      strategy: "st.dictionaries() for diff_result"
+      assertion: "同じ入力から同じメッセージが生成される"
+  
+  - id: "P2"
+    title: "環境変数解決の安全性"
+    type: "invariant"
+    description: |
+      env:プレフィックス付きの設定値は、常に対応する環境変数から
+      値が読み込まれる。環境変数が存在しない場合は適切にエラー処理される。
+    validates: ["AC-003"]
+    test-strategy: "property-based"
+    implementation:
+      framework: "hypothesis"
+      strategy: "st.text(regex=r'env:[A-Z_]+')"
+      assertion: "環境変数が適切に解決される"
+  
+  - id: "P3"
+    title: "エラー処理の継続性"
+    type: "invariant"
+    description: |
+      通知送信でエラーが発生しても、システムは適切にエラーを処理し、
+      処理を継続する。部分的な失敗でも可能な処理は継続される。
+    validates: ["AC-006"]
+    test-strategy: "unit"
+    implementation:
+      framework: "pytest"
+      strategy: "エラー注入テスト"
+      assertion: "エラー発生時も処理が継続される"
+  
+  - id: "P4"
+    title: "通知内容の完全性"
+    type: "completeness"
+    description: |
+      差分検知結果の全ての変化（added/removed/changed）が
+      適切に通知メッセージに含まれる。
+    validates: ["AC-001"]
+    test-strategy: "property-based"
+    implementation:
+      framework: "hypothesis"
+      strategy: "st.dictionaries(keys=st.sampled_from(['added', 'removed', 'changed']))"
+      assertion: "全ての変化が通知に含まれる"
+
+data-structures:
+  - name: "diff_result"
+    type: "dict"
+    schema:
+      added:
+        type: "list"
+        required: false
+        description: "新規追加されたアイテムのリスト"
+      removed:
+        type: "list"
+        required: false
+        description: "削除されたアイテムのリスト"
+      changed:
+        type: "list"
+        required: false
+        description: "内容変更されたアイテムのリスト"
+    example:
+      added:
+        - id: "fortinet:fortios:7.6.7:release"
+          title: "FortiOS 7.6.7 Release Notes"
+          url: "https://docs.fortinet.com/..."
+      changed:
+        - id: "fortinet:fortios:7.6.6:release"
+          title: "FortiOS 7.6.6 Release Notes"
+          url: "https://docs.fortinet.com/..."
+          changes: ["PDF URLが更新されました"]
+  
+  - name: "notification_settings"
+    type: "dict"
+    schema:
+      slack:
+        type: "dict"
+        required: false
+        description: "Slack通知設定"
+      discord:
+        type: "dict"
+        required: false
+        description: "Discord通知設定"
+      teams:
+        type: "dict"
+        required: false
+        description: "Teams通知設定"
+      email:
+        type: "dict"
+        required: false
+        description: "メール通知設定"
+
+message-templates:
+  change-notification:
+    format: |
+      🏮 Okina（翁）からのお知らせ
+      
+      📅 {timestamp}
+      🔍 ソース: {source}
+      
+      {changes_summary}
+      
+      詳細は okina history で確認できます
+    
+    changes-summary:
+      added: "✨ 新規追加: {count}件"
+      removed: "🗑️ 削除: {count}件"
+      changed: "🔄 内容変更: {count}件"
+    
+    item-detail:
+      format: |
+        • {title}
+          {url}
+      
+      changed-format: |
+        • {title}
+          {url}
+          変更: {changes}
+  
+  error-notification:
+    format: |
+      🏮 Okina（翁）からの異常報告
+      
+      📅 {timestamp}
+      ⚠️ {error_type}: {error_message}
+      
+      確認をお願いします
+    
+    error-types:
+      no-data: "データ取得異常"
+      no-history: "履歴データなし"
+      parse-error: "データ解析異常"
+      system-error: "システム異常"
+
+error-handling:
+  - error: "requests.RequestException"
+    handling: "continue"
+    message: "通知送信に失敗しました: {platform} - {error}"
+    log-level: "error"
+  
+  - error: "smtplib.SMTPException"
+    handling: "continue"
+    message: "メール送信に失敗しました: {error}"
+    log-level: "error"
+  
+  - error: "KeyError"
+    handling: "continue"
+    message: "設定項目が不足しています: {key}"
+    log-level: "warning"
+  
+  - error: "ValueError"
+    handling: "continue"
+    message: "設定値が不正です: {value}"
+    log-level: "warning"
+
+configuration:
+  - name: "notifications.slack.enabled"
+    type: "bool"
+    required: false
+    default: false
+    description: "Slack通知の有効/無効"
+  
+  - name: "notifications.slack.webhook_url"
+    type: "str"
+    required: true
+    default: null
+    description: "Slack Webhook URL（env:プレフィックス対応）"
+    validation:
+      - "有効なURL形式またはenv:プレフィックス"
+  
+  - name: "notifications.slack.channel"
+    type: "str"
+    required: false
+    default: "#alerts"
+    description: "通知先チャンネル"
+  
+  - name: "notifications.slack.username"
+    type: "str"
+    required: false
+    default: "Okina（翁）"
+    description: "通知時のユーザー名"
+  
+  - name: "notifications.slack.icon_emoji"
+    type: "str"
+    required: false
+    default: ":older_man:"
+    description: "通知時のアイコン"
+  
+  - name: "output.max_items_per_notification"
+    type: "int"
+    required: false
+    default: 10
+    description: "1回の通知で表示する最大アイテム数"
+    validation:
+      - "1以上の整数"
+
+dependencies:
+  internal: []
+  external:
+    - name: "requests"
+      version: ">=2.31.0"
+      purpose: "HTTP通信（Webhook送信）"
+    - name: "smtplib"
+      version: "標準ライブラリ"
+      purpose: "メール送信"
+    - name: "email"
+      version: "標準ライブラリ"
+      purpose: "メールメッセージ作成"
+
+testing-strategy:
+  property-tests:
+    - property: "P1"
+      file: "tests/test_notification_properties.py"
+      function: "test_message_generation_consistency"
+    
+    - property: "P2"
+      file: "tests/test_notification_properties.py"
+      function: "test_env_var_resolution_safety"
+    
+    - property: "P4"
+      file: "tests/test_notification_properties.py"
+      function: "test_notification_completeness"
+  
+  integration-tests:
+    - validates: ["AC-001", "AC-002"]
+      file: "tests/test_notification_integration.py"
+      function: "test_end_to_end_notification_flow"
+    
+    - validates: ["AC-004", "AC-005"]
+      file: "tests/test_notification_integration.py"
+      function: "test_error_notification_flow"
+    
+    - validates: ["AC-006"]
+      file: "tests/test_notification_integration.py"
+      function: "test_error_handling_scenarios"
+  
+  unit-tests:
+    - validates: ["AC-001"]
+      file: "tests/test_notification_unit.py"
+      function: "test_change_message_formatting"
+    
+    - validates: ["AC-003"]
+      file: "tests/test_notification_unit.py"
+      function: "test_env_var_resolution"
+    
+    - validates: ["AC-005"]
+      file: "tests/test_notification_unit.py"
+      function: "test_message_tone_and_style"
+
+performance:
+  targets:
+    - metric: "通知送信処理時間"
+      target: "< 10秒"
+      measurement: "NotificationManager.send_*_notification()の実行時間"
+    
+    - metric: "メッセージ生成処理時間"
+      target: "< 100ms"
+      measurement: "MessageFormatter.format_*_message()の実行時間"
+
+security:
+  considerations:
+    - "Webhook URLの検証（有効なURL形式）"
+    - "環境変数による機密情報管理"
+    - "通信時のタイムアウト設定（DoS攻撃防止）"
+    - "メール認証情報の安全な管理"
+    - "通知内容に機密情報を含めない"
+
+resilience:
+  notification-failure:
+    considered: true
+    decision: "adopted"
+    rationale: |
+      通知送信失敗時は、エラーログを出力して処理を継続する。
+      Okinaは「主役ではない」ため、通知失敗でシステム全体を
+      停止させることは適切ではない。
+    implementation:
+      - "各プラットフォームの送信失敗を独立して処理"
+      - "部分的な失敗でも可能な処理は継続"
+      - "エラーログによる問題の記録"
+  
+  network-partition:
+    considered: true
+    decision: "adopted"
+    rationale: |
+      ネットワーク分断時は、タイムアウトでエラーを検出し、
+      ローカルログに記録して処理を継続する。
+    implementation:
+      - "適切なタイムアウト設定（10秒）"
+      - "接続エラーの適切な処理"
+      - "ローカルログへの記録"
+  
+  configuration-error:
+    considered: true
+    decision: "adopted"
+    rationale: |
+      設定エラー時は、警告メッセージを表示して
+      該当する通知方式をスキップし、処理を継続する。
+    implementation:
+      - "設定検証とエラーメッセージ"
+      - "部分的な設定エラーでも他の方式は継続"
+      - "分かりやすいエラーメッセージ"

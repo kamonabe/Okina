@@ -1,0 +1,603 @@
+# 設計書: Okina変化監視システム
+
+metadata:
+  title: "Okina変化監視システム"
+  feature: "change-monitor"
+  status: "draft"
+  created: "2025-12-22"
+  updated: "2025-12-22"
+  version: "1.0.0"
+  last_validated: null
+  validation_passed: null
+
+architecture:
+  overview: |
+    Okina変化監視システムは5層構造で設計されている：
+    1. 設定管理層 - 設定ファイルの読み込みと検証
+    2. データ監視層 - 正規化データファイルの監視と特定
+    3. 処理制御層 - 差分抽出と通知の統合制御
+    4. エラー処理層 - 異常検知と適切な処理
+    5. ログ管理層 - 処理状況の記録と追跡
+    
+    翁のような存在として、静かに全体を見守り、必要な時のみ行動する
+    控えめで信頼性の高い設計となっている。
+  
+  components:
+    - name: "ChangeMonitor"
+      type: "class"
+      responsibility: "変化監視システムの統合管理"
+      dependencies: ["DiffAnalyzer", "NotificationManager", "yaml", "pathlib"]
+    
+    - name: "ConfigManager"
+      type: "class"
+      responsibility: "設定ファイルの管理と検証"
+      dependencies: ["yaml", "pathlib"]
+    
+    - name: "DataWatcher"
+      type: "class"
+      responsibility: "正規化データファイルの監視"
+      dependencies: ["pathlib", "glob"]
+    
+    - name: "ProcessController"
+      type: "class"
+      responsibility: "処理フローの制御と統合"
+      dependencies: ["DiffAnalyzer", "NotificationManager"]
+    
+    - name: "ErrorHandler"
+      type: "class"
+      responsibility: "エラー処理と異常通知"
+      dependencies: ["NotificationManager", "logging"]
+  
+  data-flow:
+    - from: "設定ファイル"
+      to: "設定管理"
+      description: "YAML設定の読み込みと検証"
+    
+    - from: "設定管理"
+      to: "データ監視"
+      description: "監視対象ディレクトリとパターンの設定"
+    
+    - from: "データ監視"
+      to: "処理制御"
+      description: "検出されたソースファイルの処理"
+    
+    - from: "処理制御"
+      to: "差分抽出"
+      description: "各ソースの差分抽出実行"
+    
+    - from: "差分抽出"
+      to: "通知制御"
+      description: "変化検知結果の通知判定"
+    
+    - from: "通知制御"
+      to: "通知送信"
+      description: "変化通知または異常通知の送信"
+
+modules:
+  - name: "monitor"
+    path: "src/okina/monitor.py"
+    description: |
+      Okina変化監視システムのメインモジュール。
+      正規化データの監視、差分抽出と通知の統合制御、
+      エラーハンドリングを担当する。
+    
+    classes:
+      - name: "ChangeMonitor"
+        description: "変化監視システムの統合管理クラス"
+        methods:
+          - name: "__init__"
+            parameters:
+              - name: "config_path"
+                type: "str"
+                description: "設定ファイルパス"
+                default: "settings.yml"
+            description: "変化監視システムの初期化"
+          
+          - name: "run"
+            parameters: []
+            returns:
+              type: "bool"
+              description: "処理成功時True"
+            description: "変化監視のメイン処理"
+          
+          - name: "watch_changes"
+            parameters: []
+            returns:
+              type: "dict"
+              description: "監視結果サマリー"
+            description: "変化監視の実行"
+          
+          - name: "process_source"
+            parameters:
+              - name: "source_file"
+                type: "str"
+                description: "ソースファイルパス"
+            returns:
+              type: "dict"
+              description: "処理結果"
+            description: "単一ソースの処理"
+      
+      - name: "ConfigManager"
+        description: "設定管理クラス"
+        methods:
+          - name: "load_config"
+            parameters:
+              - name: "config_path"
+                type: "str"
+                description: "設定ファイルパス"
+            returns:
+              type: "dict"
+              description: "設定辞書"
+            description: "設定ファイルの読み込み"
+          
+          - name: "validate_config"
+            parameters:
+              - name: "config"
+                type: "dict"
+                description: "設定辞書"
+            returns:
+              type: "bool"
+              description: "検証成功時True"
+            description: "設定内容の検証"
+      
+      - name: "DataWatcher"
+        description: "データ監視クラス"
+        methods:
+          - name: "find_source_files"
+            parameters:
+              - name: "data_directory"
+                type: "str"
+                description: "データディレクトリ"
+              - name: "file_pattern"
+                type: "str"
+                description: "ファイルパターン"
+            returns:
+              type: "list"
+              description: "ソースファイルリスト"
+            description: "ソースファイルの検出"
+          
+          - name: "extract_source_name"
+            parameters:
+              - name: "file_path"
+                type: "str"
+                description: "ファイルパス"
+            returns:
+              type: "str"
+              description: "ソース名"
+            description: "ファイルパスからソース名を抽出"
+
+correctness-properties:
+  - id: "P1"
+    title: "処理の原子性"
+    type: "atomicity"
+    description: |
+      各ソースの処理は原子的に実行される。
+      一つのソースでエラーが発生しても、他のソースの処理に影響しない。
+    validates: ["AC-005"]
+    test-strategy: "unit"
+    implementation:
+      framework: "pytest"
+      strategy: "エラー注入テスト"
+      assertion: "一部ソースのエラーが他に影響しない"
+  
+  - id: "P2"
+    title: "設定検証の完全性"
+    type: "completeness"
+    description: |
+      設定ファイルの全ての必須項目が検証される。
+      不正な設定は適切にエラーとして検出される。
+    validates: ["AC-006"]
+    test-strategy: "property-based"
+    implementation:
+      framework: "hypothesis"
+      strategy: "st.dictionaries() for config variations"
+      assertion: "不正設定が適切に検出される"
+  
+  - id: "P3"
+    title: "エラー通知の確実性"
+    type: "reliability"
+    description: |
+      システム異常が発生した場合、必ず異常通知が送信される。
+      通知送信の失敗も適切にログに記録される。
+    validates: ["AC-004"]
+    test-strategy: "unit"
+    implementation:
+      framework: "pytest"
+      strategy: "モック使用のエラーシナリオテスト"
+      assertion: "異常時に必ず通知される"
+  
+  - id: "P4"
+    title: "ログ記録の一貫性"
+    type: "invariant"
+    description: |
+      処理の各段階で適切なレベルのログが記録される。
+      エラー時も含めて、処理の追跡が可能である。
+    validates: ["AC-007"]
+    test-strategy: "integration"
+    implementation:
+      framework: "pytest"
+      strategy: "ログ出力の検証"
+      assertion: "全処理段階でログが記録される"
+  
+  - id: "P5"
+    title: "翁らしさの保持"
+    type: "behavioral"
+    description: |
+      全ての出力とメッセージが翁らしく静かで控えめである。
+      判断的な表現や過度な出力は行われない。
+    validates: ["AC-008"]
+    test-strategy: "manual"
+    implementation:
+      framework: "manual-review"
+      strategy: "出力内容のレビュー"
+      assertion: "翁らしい振る舞いが保たれる"
+
+data-structures:
+  - name: "monitor_config"
+    type: "dict"
+    schema:
+      input:
+        type: "dict"
+        required: true
+        description: "入力データ設定"
+      storage:
+        type: "dict"
+        required: true
+        description: "ストレージ設定"
+      notifications:
+        type: "dict"
+        required: true
+        description: "通知設定"
+      output:
+        type: "dict"
+        required: false
+        description: "出力設定"
+      logging:
+        type: "dict"
+        required: false
+        description: "ログ設定"
+    example:
+      input:
+        data_directory: "data/input"
+        file_pattern: "*.jsonl"
+      storage:
+        history_directory: "data/history"
+        max_history_days: 30
+      notifications:
+        slack:
+          enabled: true
+          webhook_url: "env:OKINA_SLACK_WEBHOOK"
+  
+  - name: "monitoring_result"
+    type: "dict"
+    schema:
+      success:
+        type: "bool"
+        required: true
+        description: "処理成功フラグ"
+      sources_processed:
+        type: "int"
+        required: true
+        description: "処理されたソース数"
+      sources_with_changes:
+        type: "int"
+        required: true
+        description: "変化があったソース数"
+      total_changes:
+        type: "dict"
+        required: true
+        description: "変化の合計"
+      errors:
+        type: "list"
+        required: false
+        description: "発生したエラーのリスト"
+      processing_time:
+        type: "float"
+        required: true
+        description: "処理時間（秒）"
+    example:
+      success: true
+      sources_processed: 3
+      sources_with_changes: 2
+      total_changes:
+        added: 5
+        removed: 1
+        changed: 2
+      errors: []
+      processing_time: 2.34
+  
+  - name: "source_result"
+    type: "dict"
+    schema:
+      source_name:
+        type: "str"
+        required: true
+        description: "ソース名"
+      file_path:
+        type: "str"
+        required: true
+        description: "ファイルパス"
+      success:
+        type: "bool"
+        required: true
+        description: "処理成功フラグ"
+      diff_result:
+        type: "dict"
+        required: false
+        description: "差分抽出結果"
+      notification_sent:
+        type: "bool"
+        required: false
+        description: "通知送信フラグ"
+      error:
+        type: "str"
+        required: false
+        description: "エラーメッセージ"
+      processing_time:
+        type: "float"
+        required: true
+        description: "処理時間（秒）"
+
+processing-flow:
+  main-flow:
+    description: |
+      変化監視のメイン処理フロー。
+      翁らしく静かに、しかし確実に処理を実行する。
+    steps:
+      1. "設定ファイルの読み込みと検証"
+      2. "データディレクトリの監視"
+      3. "ソースファイルの検出"
+      4. "各ソースの独立処理"
+      5. "結果の統合と通知"
+      6. "処理完了の記録"
+    error-handling:
+      - "各段階でのエラーを適切に処理"
+      - "部分的な失敗でも可能な処理は継続"
+      - "異常時は必ず通知を送信"
+  
+  source-processing:
+    description: |
+      単一ソースの処理フロー。
+      各ソースを独立して処理し、エラーの影響を局所化する。
+    steps:
+      1. "ソース名の抽出"
+      2. "差分抽出システムの呼び出し"
+      3. "変化検知結果の評価"
+      4. "必要に応じて通知送信"
+      5. "処理結果の記録"
+    isolation:
+      - "各ソースの処理は独立"
+      - "一つのエラーが他に影響しない"
+      - "部分的な成功も適切に処理"
+  
+  error-flow:
+    description: |
+      エラー処理フロー。
+      翁らしく控えめに、しかし確実にエラーを報告する。
+    steps:
+      1. "エラーの種別判定"
+      2. "適切なログレベルでの記録"
+      3. "異常通知の送信"
+      4. "処理継続の判定"
+      5. "復旧可能性の評価"
+    error-types:
+      - "設定エラー: 処理中断"
+      - "データエラー: 該当ソーススキップ"
+      - "システムエラー: 異常通知後継続"
+
+error-handling:
+  - error: "FileNotFoundError"
+    context: "設定ファイル読み込み"
+    handling: "abort"
+    message: "設定ファイルが見つかりません: {file_path}"
+    log-level: "critical"
+    notification: true
+  
+  - error: "yaml.YAMLError"
+    context: "設定ファイル解析"
+    handling: "abort"
+    message: "設定ファイルの形式が不正です: {error}"
+    log-level: "critical"
+    notification: true
+  
+  - error: "FileNotFoundError"
+    context: "データディレクトリ"
+    handling: "continue"
+    message: "データディレクトリが見つかりません: {directory}"
+    log-level: "error"
+    notification: true
+  
+  - error: "PermissionError"
+    context: "ファイルアクセス"
+    handling: "continue"
+    message: "ファイルアクセス権限がありません: {file_path}"
+    log-level: "error"
+    notification: true
+  
+  - error: "Exception"
+    context: "差分抽出処理"
+    handling: "continue"
+    message: "差分抽出でエラーが発生しました: {source} - {error}"
+    log-level: "error"
+    notification: true
+  
+  - error: "Exception"
+    context: "通知送信"
+    handling: "continue"
+    message: "通知送信でエラーが発生しました: {error}"
+    log-level: "warning"
+    notification: false
+
+configuration:
+  - name: "input.data_directory"
+    type: "str"
+    required: true
+    default: "data/input"
+    description: "正規化データの監視ディレクトリ"
+    validation:
+      - "ディレクトリが存在する"
+      - "読み取り権限がある"
+  
+  - name: "input.file_pattern"
+    type: "str"
+    required: false
+    default: "*.jsonl"
+    description: "監視対象ファイルパターン"
+    validation:
+      - "有効なglobパターン"
+  
+  - name: "logging.level"
+    type: "str"
+    required: false
+    default: "INFO"
+    description: "ログレベル"
+    validation:
+      - "DEBUG, INFO, WARNING, ERROR, CRITICAL のいずれか"
+  
+  - name: "logging.file"
+    type: "str"
+    required: false
+    default: "log/okina.log"
+    description: "ログファイルパス"
+    validation:
+      - "書き込み可能なパス"
+  
+  - name: "processing.parallel"
+    type: "bool"
+    required: false
+    default: false
+    description: "並列処理の有効化（将来の拡張用）"
+  
+  - name: "processing.timeout_seconds"
+    type: "int"
+    required: false
+    default: 300
+    description: "処理タイムアウト（秒）"
+    validation:
+      - "1以上の整数"
+
+dependencies:
+  internal:
+    - "okina.analyzer.DiffAnalyzer"
+    - "okina.notification.NotificationManager"
+  external:
+    - name: "yaml"
+      version: "PyYAML>=6.0"
+      purpose: "設定ファイル読み込み"
+    - name: "pathlib"
+      version: "標準ライブラリ"
+      purpose: "ファイルパス操作"
+    - name: "glob"
+      version: "標準ライブラリ"
+      purpose: "ファイルパターンマッチング"
+    - name: "logging"
+      version: "標準ライブラリ"
+      purpose: "ログ出力"
+    - name: "time"
+      version: "標準ライブラリ"
+      purpose: "処理時間測定"
+
+testing-strategy:
+  property-tests:
+    - property: "P1"
+      file: "tests/test_monitor_properties.py"
+      function: "test_processing_atomicity"
+    
+    - property: "P2"
+      file: "tests/test_monitor_properties.py"
+      function: "test_config_validation_completeness"
+    
+    - property: "P3"
+      file: "tests/test_monitor_properties.py"
+      function: "test_error_notification_reliability"
+  
+  integration-tests:
+    - validates: ["AC-001", "AC-002", "AC-003"]
+      file: "tests/test_monitor_integration.py"
+      function: "test_end_to_end_monitoring_flow"
+    
+    - validates: ["AC-004", "AC-005"]
+      file: "tests/test_monitor_integration.py"
+      function: "test_error_handling_and_multi_source"
+    
+    - validates: ["AC-006", "AC-007"]
+      file: "tests/test_monitor_integration.py"
+      function: "test_config_management_and_logging"
+  
+  unit-tests:
+    - validates: ["AC-001"]
+      file: "tests/test_monitor_unit.py"
+      function: "test_data_file_detection"
+    
+    - validates: ["AC-002"]
+      file: "tests/test_monitor_unit.py"
+      function: "test_diff_analyzer_integration"
+    
+    - validates: ["AC-003"]
+      file: "tests/test_monitor_unit.py"
+      function: "test_notification_integration"
+    
+    - validates: ["AC-006"]
+      file: "tests/test_monitor_unit.py"
+      function: "test_config_management"
+
+performance:
+  targets:
+    - metric: "複数ソース処理時間"
+      target: "各ソース処理時間の合計+10秒以内"
+      measurement: "ChangeMonitor.run()の実行時間"
+    
+    - metric: "並列処理効率"
+      target: "90%以上"
+      measurement: "並列処理時間 vs 逐次処理時間"
+    
+    - metric: "メモリ使用量"
+      target: "適切に管理される"
+      measurement: "処理中の最大メモリ使用量"
+  
+  optimization-strategies:
+    - "各ソースの独立処理による並列化"
+    - "不要なデータの早期解放"
+    - "効率的なファイル検索"
+    - "適切なログレベル設定"
+
+security:
+  considerations:
+    - "設定ファイルのアクセス権限管理"
+    - "ファイルパスの検証（パストラバーサル防止）"
+    - "ログファイルの機密情報漏洩防止"
+    - "環境変数による機密情報管理"
+
+resilience:
+  partial-failure:
+    considered: true
+    decision: "adopted"
+    rationale: |
+      一部ソースの処理失敗が全体に影響しないよう、
+      各ソースを独立して処理し、部分的な成功も適切に報告する。
+    implementation:
+      - "各ソースの独立処理"
+      - "エラーの局所化"
+      - "部分成功の適切な報告"
+  
+  configuration-error:
+    considered: true
+    decision: "adopted"
+    rationale: |
+      設定エラー時は安全に処理を停止し、
+      適切なエラーメッセージで問題を報告する。
+    implementation:
+      - "設定検証の強化"
+      - "分かりやすいエラーメッセージ"
+      - "安全な処理停止"
+  
+  resource-exhaustion:
+    considered: true
+    decision: "adopted"
+    rationale: |
+      メモリやディスク容量の不足に対して、
+      適切な制限と監視を行う。
+    implementation:
+      - "処理タイムアウト設定"
+      - "メモリ使用量の監視"
+      - "適切なエラー処理"

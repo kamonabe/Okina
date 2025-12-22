@@ -1,0 +1,602 @@
+# 設計書: Okina差分抽出システム
+
+metadata:
+  title: "Okina差分抽出システム"
+  feature: "diff-analyzer"
+  status: "draft"
+  created: "2025-12-22"
+  updated: "2025-12-22"
+  version: "1.0.0"
+  last_validated: null
+  validation_passed: null
+
+architecture:
+  overview: |
+    Okina差分抽出システムは4層構造で設計されている：
+    1. データ読み込み層 - JSON Lines形式の正規化データ読み込み
+    2. 比較エンジン層 - IDベース比較と内容変更検出
+    3. 差分分析層 - 変更種別の分類と詳細分析
+    4. 履歴管理層 - 前回データの保存と読み込み
+    
+    各層は独立性を保ち、テスト可能で保守しやすい設計となっている。
+  
+  components:
+    - name: "DiffAnalyzer"
+      type: "class"
+      responsibility: "差分抽出システムの統合管理"
+      dependencies: ["json", "pathlib", "datetime"]
+    
+    - name: "DataLoader"
+      type: "class"
+      responsibility: "正規化データの読み込みと検証"
+      dependencies: ["json", "pathlib"]
+    
+    - name: "ComparisonEngine"
+      type: "class"
+      responsibility: "IDベース比較と内容変更検出"
+      dependencies: []
+    
+    - name: "ChangeDetector"
+      type: "class"
+      responsibility: "変更種別の分類と詳細分析"
+      dependencies: []
+    
+    - name: "HistoryManager"
+      type: "class"
+      responsibility: "履歴データの保存と読み込み"
+      dependencies: ["json", "pathlib", "datetime"]
+  
+  data-flow:
+    - from: "正規化データ（今回）"
+      to: "データ読み込み"
+      description: "JSON Lines形式データの読み込みと検証"
+    
+    - from: "データ読み込み"
+      to: "履歴データ読み込み"
+      description: "前回データの読み込み"
+    
+    - from: "履歴データ読み込み"
+      to: "比較エンジン"
+      description: "IDベース比較の実行"
+    
+    - from: "比較エンジン"
+      to: "差分分析"
+      description: "変更種別の分類と詳細分析"
+    
+    - from: "差分分析"
+      to: "履歴保存"
+      description: "正常終了時の履歴データ保存"
+
+modules:
+  - name: "analyzer"
+    path: "src/okina/analyzer.py"
+    description: |
+      Okina差分抽出システムのメインモジュール。
+      正規化データの比較、差分検出、履歴管理を担当する。
+    
+    classes:
+      - name: "DiffAnalyzer"
+        description: "差分抽出システムの統合管理クラス"
+        methods:
+          - name: "__init__"
+            parameters:
+              - name: "settings"
+                type: "dict"
+                description: "差分抽出設定"
+            description: "差分アナライザーの初期化"
+          
+          - name: "analyze_changes"
+            parameters:
+              - name: "source"
+                type: "str"
+                description: "データソース名"
+              - name: "input_file_path"
+                type: "str"
+                description: "正規化データファイルパス"
+            returns:
+              type: "dict"
+              description: "差分結果（added/removed/changed）"
+            description: "変化分析のメイン処理"
+          
+          - name: "load_current_data"
+            parameters:
+              - name: "file_path"
+                type: "str"
+                description: "正規化データファイルパス"
+            returns:
+              type: "list"
+              description: "正規化データのリスト"
+            description: "今回データの読み込み"
+          
+          - name: "load_previous_data"
+            parameters:
+              - name: "source"
+                type: "str"
+                description: "データソース名"
+            returns:
+              type: "list"
+              description: "前回データのリスト"
+            description: "前回データの読み込み"
+          
+          - name: "save_history"
+            parameters:
+              - name: "source"
+                type: "str"
+                description: "データソース名"
+              - name: "current_data"
+                type: "list"
+                description: "今回データ"
+            returns:
+              type: "bool"
+              description: "保存成功時True"
+            description: "履歴データの保存"
+      
+      - name: "ComparisonEngine"
+        description: "データ比較エンジンクラス"
+        methods:
+          - name: "compare_datasets"
+            parameters:
+              - name: "previous_data"
+                type: "list"
+                description: "前回データ"
+              - name: "current_data"
+                type: "list"
+                description: "今回データ"
+            returns:
+              type: "dict"
+              description: "比較結果"
+            description: "データセット比較のメイン処理"
+          
+          - name: "detect_added"
+            parameters:
+              - name: "previous_ids"
+                type: "set"
+                description: "前回IDセット"
+              - name: "current_data"
+                type: "list"
+                description: "今回データ"
+            returns:
+              type: "list"
+              description: "新規追加アイテム"
+            description: "新規追加の検出"
+          
+          - name: "detect_removed"
+            parameters:
+              - name: "previous_data"
+                type: "list"
+                description: "前回データ"
+              - name: "current_ids"
+                type: "set"
+                description: "今回IDセット"
+            returns:
+              type: "list"
+              description: "削除アイテム"
+            description: "削除の検出"
+          
+          - name: "detect_changed"
+            parameters:
+              - name: "previous_data"
+                type: "list"
+                description: "前回データ"
+              - name: "current_data"
+                type: "list"
+                description: "今回データ"
+            returns:
+              type: "list"
+              description: "変更アイテム（変更詳細付き）"
+            description: "内容変更の検出"
+
+correctness-properties:
+  - id: "P1"
+    title: "差分検出の完全性"
+    type: "completeness"
+    description: |
+      全てのアイテムが適切に分類される。
+      added ∪ removed ∪ unchanged ∪ changed = 全アイテム
+      かつ、各集合は互いに素である。
+    validates: ["AC-001", "AC-002", "AC-003"]
+    test-strategy: "property-based"
+    implementation:
+      framework: "hypothesis"
+      strategy: "st.lists(st.dictionaries()) for datasets"
+      assertion: "全アイテムが適切に分類される"
+  
+  - id: "P2"
+    title: "ID一意性の保証"
+    type: "invariant"
+    description: |
+      同じデータセット内でIDが重複していない。
+      重複がある場合は適切にエラー処理される。
+    validates: ["AC-007"]
+    test-strategy: "property-based"
+    implementation:
+      framework: "hypothesis"
+      strategy: "st.lists(st.dictionaries(), unique_by=lambda x: x.get('id'))"
+      assertion: "ID重複時にエラーが発生する"
+  
+  - id: "P3"
+    title: "content_hash最適化の正確性"
+    type: "equivalence"
+    description: |
+      content_hashを使用した高速比較と、
+      詳細比較の結果が一致する。
+    validates: ["AC-004"]
+    test-strategy: "property-based"
+    implementation:
+      framework: "hypothesis"
+      strategy: "st.dictionaries() with content_hash"
+      assertion: "ハッシュ比較と詳細比較の結果が一致"
+  
+  - id: "P4"
+    title: "履歴管理の整合性"
+    type: "invariant"
+    description: |
+      正常終了時のみ履歴が更新される。
+      エラー時は前回データが保持される。
+    validates: ["AC-006"]
+    test-strategy: "unit"
+    implementation:
+      framework: "pytest"
+      strategy: "エラー注入テスト"
+      assertion: "エラー時に履歴が更新されない"
+  
+  - id: "P5"
+    title: "変更検出の対称性"
+    type: "symmetry"
+    description: |
+      データセットAとBを比較した結果と、
+      BとAを比較した結果が対称的である。
+      A→Bのaddedは、B→Aのremovedと一致する。
+    validates: ["AC-001", "AC-002"]
+    test-strategy: "property-based"
+    implementation:
+      framework: "hypothesis"
+      strategy: "st.tuples(dataset_a, dataset_b)"
+      assertion: "比較結果の対称性が保たれる"
+
+data-structures:
+  - name: "normalized_item"
+    type: "dict"
+    schema:
+      schema:
+        type: "str"
+        required: true
+        description: "スキーマバージョン"
+      source:
+        type: "str"
+        required: true
+        description: "データソース識別子"
+      id:
+        type: "str"
+        required: true
+        description: "一意識別子"
+      type:
+        type: "str"
+        required: true
+        description: "アイテムタイプ"
+      title:
+        type: "str"
+        required: true
+        description: "人間が読める名前"
+      url:
+        type: "str"
+        required: true
+        description: "参照URL"
+      observed_at:
+        type: "str"
+        required: true
+        description: "観測日時（ISO 8601）"
+      version:
+        type: "str"
+        required: false
+        description: "バージョン情報"
+      payload:
+        type: "dict"
+        required: false
+        description: "追加データ"
+      content_hash:
+        type: "str"
+        required: false
+        description: "内容ハッシュ（高速化用）"
+  
+  - name: "diff_result"
+    type: "dict"
+    schema:
+      added:
+        type: "list"
+        required: false
+        description: "新規追加されたアイテム"
+      removed:
+        type: "list"
+        required: false
+        description: "削除されたアイテム"
+      changed:
+        type: "list"
+        required: false
+        description: "内容変更されたアイテム（変更詳細付き）"
+      summary:
+        type: "dict"
+        required: true
+        description: "差分サマリー"
+    example:
+      added:
+        - id: "fortinet:fortios:7.6.7:release"
+          title: "FortiOS 7.6.7 Release Notes"
+          url: "https://docs.fortinet.com/..."
+      changed:
+        - id: "fortinet:fortios:7.6.6:release"
+          title: "FortiOS 7.6.6 Release Notes"
+          url: "https://docs.fortinet.com/..."
+          changes:
+            - field: "payload.pdf_url"
+              old_value: "https://old-url.com"
+              new_value: "https://new-url.com"
+              description: "PDF URLが更新されました"
+      summary:
+        total_previous: 10
+        total_current: 11
+        added_count: 1
+        removed_count: 0
+        changed_count: 1
+  
+  - name: "change_detail"
+    type: "dict"
+    schema:
+      field:
+        type: "str"
+        required: true
+        description: "変更されたフィールド名"
+      old_value:
+        type: "any"
+        required: true
+        description: "変更前の値"
+      new_value:
+        type: "any"
+        required: true
+        description: "変更後の値"
+      description:
+        type: "str"
+        required: true
+        description: "変更の説明"
+
+comparison-algorithms:
+  id-based-comparison:
+    description: |
+      IDフィールドをキーとした高速比較アルゴリズム。
+      O(n + m) の時間計算量で差分を検出する。
+    steps:
+      1. "前回データと今回データからIDセットを作成"
+      2. "集合演算で added = current_ids - previous_ids"
+      3. "集合演算で removed = previous_ids - current_ids"
+      4. "共通IDについて内容変更を検出"
+    complexity:
+      time: "O(n + m)"
+      space: "O(n + m)"
+      where: "n = 前回データ件数, m = 今回データ件数"
+  
+  content-hash-optimization:
+    description: |
+      content_hashフィールドを使用した高速化アルゴリズム。
+      ハッシュ値が同じ場合は詳細比較をスキップする。
+    steps:
+      1. "content_hashが存在するかチェック"
+      2. "ハッシュ値が同じ場合は変更なしと判定"
+      3. "ハッシュ値が異なる場合のみ詳細比較実行"
+    optimization:
+      best-case: "O(1) per item (ハッシュ値同じ)"
+      worst-case: "O(k) per item (詳細比較必要)"
+      where: "k = アイテムのフィールド数"
+  
+  field-level-comparison:
+    description: |
+      フィールドレベルでの詳細比較アルゴリズム。
+      変更されたフィールドと変更内容を特定する。
+    steps:
+      1. "比較対象フィールドを特定（observed_at除く）"
+      2. "各フィールドの値を比較"
+      3. "変更があるフィールドの詳細を記録"
+      4. "ネストしたオブジェクト（payload）も再帰的に比較"
+    excluded-fields:
+      - "observed_at"  # 観測時刻は比較対象外
+      - "content_hash"  # ハッシュ値自体は比較対象外
+
+error-handling:
+  - error: "FileNotFoundError"
+    handling: "continue"
+    message: "データファイルが見つかりません: {file_path}"
+    log-level: "error"
+    action: "初回実行として処理"
+  
+  - error: "json.JSONDecodeError"
+    handling: "continue"
+    message: "JSONデータの解析に失敗しました: {error}"
+    log-level: "error"
+    action: "該当行をスキップして処理継続"
+  
+  - error: "KeyError"
+    handling: "continue"
+    message: "必須フィールドが不足しています: {field}"
+    log-level: "warning"
+    action: "該当アイテムをスキップして処理継続"
+  
+  - error: "ValueError"
+    handling: "continue"
+    message: "データ形式が不正です: {value}"
+    log-level: "warning"
+    action: "該当アイテムをスキップして処理継続"
+  
+  - error: "MemoryError"
+    handling: "abort"
+    message: "メモリ不足です。データサイズを確認してください"
+    log-level: "critical"
+    action: "処理を中断"
+
+configuration:
+  - name: "input.data_directory"
+    type: "str"
+    required: true
+    default: "data/input"
+    description: "正規化データの読み込み先ディレクトリ"
+  
+  - name: "input.file_pattern"
+    type: "str"
+    required: false
+    default: "*.jsonl"
+    description: "読み込み対象ファイルパターン"
+  
+  - name: "storage.history_directory"
+    type: "str"
+    required: true
+    default: "data/history"
+    description: "履歴データの保存先ディレクトリ"
+  
+  - name: "storage.max_history_days"
+    type: "int"
+    required: false
+    default: 30
+    description: "履歴保持日数"
+    validation:
+      - "1以上の整数"
+  
+  - name: "comparison.use_content_hash"
+    type: "bool"
+    required: false
+    default: true
+    description: "content_hashによる高速化を使用するか"
+  
+  - name: "comparison.max_items"
+    type: "int"
+    required: false
+    default: 10000
+    description: "処理可能な最大アイテム数"
+    validation:
+      - "1以上の整数"
+
+dependencies:
+  internal: []
+  external:
+    - name: "json"
+      version: "標準ライブラリ"
+      purpose: "JSON データの読み書き"
+    - name: "pathlib"
+      version: "標準ライブラリ"
+      purpose: "ファイルパス操作"
+    - name: "datetime"
+      version: "標準ライブラリ"
+      purpose: "日時処理"
+    - name: "hashlib"
+      version: "標準ライブラリ"
+      purpose: "ハッシュ値計算（将来の拡張用）"
+
+testing-strategy:
+  property-tests:
+    - property: "P1"
+      file: "tests/test_analyzer_properties.py"
+      function: "test_diff_detection_completeness"
+    
+    - property: "P2"
+      file: "tests/test_analyzer_properties.py"
+      function: "test_id_uniqueness_guarantee"
+    
+    - property: "P3"
+      file: "tests/test_analyzer_properties.py"
+      function: "test_content_hash_optimization_accuracy"
+    
+    - property: "P5"
+      file: "tests/test_analyzer_properties.py"
+      function: "test_change_detection_symmetry"
+  
+  integration-tests:
+    - validates: ["AC-001", "AC-002", "AC-003"]
+      file: "tests/test_analyzer_integration.py"
+      function: "test_end_to_end_diff_analysis"
+    
+    - validates: ["AC-006", "AC-007"]
+      file: "tests/test_analyzer_integration.py"
+      function: "test_history_management_and_error_handling"
+    
+    - validates: ["AC-004", "AC-005"]
+      file: "tests/test_analyzer_integration.py"
+      function: "test_optimization_and_schema_handling"
+  
+  unit-tests:
+    - validates: ["AC-001"]
+      file: "tests/test_analyzer_unit.py"
+      function: "test_detect_added_items"
+    
+    - validates: ["AC-002"]
+      file: "tests/test_analyzer_unit.py"
+      function: "test_detect_removed_items"
+    
+    - validates: ["AC-003"]
+      file: "tests/test_analyzer_unit.py"
+      function: "test_detect_changed_items"
+    
+    - validates: ["AC-004"]
+      file: "tests/test_analyzer_unit.py"
+      function: "test_content_hash_optimization"
+    
+    - validates: ["AC-006"]
+      file: "tests/test_analyzer_unit.py"
+      function: "test_history_data_management"
+
+performance:
+  targets:
+    - metric: "1000件データ比較時間"
+      target: "< 1秒"
+      measurement: "DiffAnalyzer.analyze_changes()の実行時間"
+    
+    - metric: "content_hash高速化効果"
+      target: "10倍高速化"
+      measurement: "ハッシュ比較 vs 詳細比較の時間比"
+    
+    - metric: "メモリ使用量"
+      target: "入力データサイズの3倍以内"
+      measurement: "処理中の最大メモリ使用量"
+  
+  optimization-strategies:
+    - "IDセットによる高速集合演算"
+    - "content_hashによる詳細比較スキップ"
+    - "ジェネレーター使用によるメモリ効率化"
+    - "不要なデータコピーの削減"
+
+security:
+  considerations:
+    - "入力データの検証（JSONインジェクション防止）"
+    - "ファイルパスの検証（パストラバーサル防止）"
+    - "メモリ使用量の制限（DoS攻撃防止）"
+    - "履歴データのアクセス権限管理"
+
+resilience:
+  data-corruption:
+    considered: true
+    decision: "adopted"
+    rationale: |
+      履歴データが破損した場合、警告を出力して
+      初回実行として処理を継続する。
+    implementation:
+      - "履歴データの整合性チェック"
+      - "破損時の自動復旧（初回実行扱い）"
+      - "適切な警告メッセージ"
+  
+  large-dataset:
+    considered: true
+    decision: "adopted"
+    rationale: |
+      大容量データセットに対してはメモリ制限を設け、
+      制限を超える場合はエラーを出力する。
+    implementation:
+      - "最大アイテム数の制限"
+      - "メモリ使用量の監視"
+      - "適切なエラーメッセージ"
+  
+  schema-evolution:
+    considered: true
+    decision: "adopted"
+    rationale: |
+      スキーマバージョンの変更に対応し、
+      後方互換性を可能な限り維持する。
+    implementation:
+      - "スキーマバージョンの検証"
+      - "互換性のある範囲での処理継続"
+      - "非互換時の適切な警告"

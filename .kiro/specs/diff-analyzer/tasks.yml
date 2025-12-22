@@ -1,0 +1,427 @@
+# タスク管理: Okina差分抽出システム
+
+metadata:
+  title: "Okina差分抽出システム"
+  feature: "diff-analyzer"
+  status: "draft"
+  created: "2025-12-22"
+  updated: "2025-12-22"
+  version: "1.0.0"
+
+implementation-tasks:
+  - id: "TASK-001"
+    title: "DataLoaderクラスの実装"
+    priority: "high"
+    status: "pending"
+    estimated-hours: 3
+    dependencies: []
+    description: |
+      JSON Lines形式の正規化データを読み込み、検証する
+      DataLoaderクラスを実装する。
+    acceptance-criteria:
+      - "JSON Lines形式ファイルの読み込み"
+      - "スキーマバージョンの検証"
+      - "必須フィールドの検証"
+      - "ID重複チェック"
+      - "エラー時の適切な処理"
+    files-to-create:
+      - "src/okina/analyzer.py (DataLoader部分)"
+    files-to-modify: []
+    tests-to-create:
+      - "tests/test_analyzer_unit.py (test_data_loading)"
+    validation:
+      - "正常なJSONLファイルが読み込める"
+      - "不正なデータでエラーハンドリングされる"
+      - "ID重複時に適切にエラーが発生する"
+
+  - id: "TASK-002"
+    title: "ComparisonEngineクラスの実装"
+    priority: "high"
+    status: "pending"
+    estimated-hours: 4
+    dependencies: ["TASK-001"]
+    description: |
+      IDベース比較と内容変更検出を行う
+      ComparisonEngineクラスを実装する。
+    acceptance-criteria:
+      - "IDベースの高速比較アルゴリズム"
+      - "新規追加・削除・変更の検出"
+      - "content_hashによる高速化"
+      - "フィールドレベルの変更検出"
+      - "ネストしたオブジェクトの比較"
+    files-to-create:
+      - "src/okina/analyzer.py (ComparisonEngine部分)"
+    files-to-modify: []
+    tests-to-create:
+      - "tests/test_analyzer_unit.py (比較関連テスト)"
+    validation:
+      - "IDベース比較が正確に動作する"
+      - "content_hash最適化が正しく機能する"
+      - "変更詳細が適切に検出される"
+
+  - id: "TASK-003"
+    title: "HistoryManagerクラスの実装"
+    priority: "high"
+    status: "pending"
+    estimated-hours: 3
+    dependencies: ["TASK-001"]
+    description: |
+      履歴データの保存と読み込みを管理する
+      HistoryManagerクラスを実装する。
+    acceptance-criteria:
+      - "履歴データの保存機能"
+      - "履歴データの読み込み機能"
+      - "古い履歴の自動削除"
+      - "履歴データの整合性チェック"
+      - "初回実行時の適切な処理"
+    files-to-create:
+      - "src/okina/analyzer.py (HistoryManager部分)"
+    files-to-modify: []
+    tests-to-create:
+      - "tests/test_analyzer_unit.py (test_history_management)"
+    validation:
+      - "履歴データが適切に保存される"
+      - "破損した履歴データが適切に処理される"
+      - "古い履歴が自動削除される"
+
+  - id: "TASK-004"
+    title: "DiffAnalyzerクラスの実装"
+    priority: "high"
+    status: "pending"
+    estimated-hours: 4
+    dependencies: ["TASK-001", "TASK-002", "TASK-003"]
+    description: |
+      差分抽出システム全体を統合管理する
+      DiffAnalyzerクラスを実装する。
+    acceptance-criteria:
+      - "analyze_changes()メインメソッドの実装"
+      - "各コンポーネントの統合"
+      - "エラーハンドリングの統合"
+      - "設定管理の統合"
+      - "パフォーマンス最適化"
+    files-to-create:
+      - "src/okina/analyzer.py (DiffAnalyzer部分)"
+    files-to-modify: []
+    tests-to-create:
+      - "tests/test_analyzer_integration.py"
+    validation:
+      - "エンドツーエンドで差分抽出が動作する"
+      - "エラー時も適切に処理が継続される"
+      - "パフォーマンス要件を満たす"
+
+  - id: "TASK-005"
+    title: "プロパティベーステストの実装"
+    priority: "medium"
+    status: "pending"
+    estimated-hours: 3
+    dependencies: ["TASK-001", "TASK-002", "TASK-003", "TASK-004"]
+    description: |
+      hypothesisを使用したプロパティベーステストを実装し、
+      差分抽出システムの不変条件を検証する。
+    acceptance-criteria:
+      - "差分検出の完全性テスト"
+      - "ID一意性の保証テスト"
+      - "content_hash最適化の正確性テスト"
+      - "変更検出の対称性テスト"
+      - "履歴管理の整合性テスト"
+    files-to-create:
+      - "tests/test_analyzer_properties.py"
+    files-to-modify: []
+    tests-to-create:
+      - "tests/test_analyzer_properties.py (全プロパティテスト)"
+    validation:
+      - "プロパティテストが全てパス"
+      - "不変条件が適切に検証される"
+      - "エッジケースが発見・修正される"
+
+  - id: "TASK-006"
+    title: "パフォーマンス最適化とベンチマーク"
+    priority: "medium"
+    status: "pending"
+    estimated-hours: 2
+    dependencies: ["TASK-004"]
+    description: |
+      パフォーマンス要件を満たすための最適化と
+      ベンチマークテストを実装する。
+    acceptance-criteria:
+      - "1000件データ1秒以内の処理"
+      - "content_hash10倍高速化の達成"
+      - "メモリ使用量の最適化"
+      - "ベンチマークテストの実装"
+    files-to-create:
+      - "tests/test_analyzer_benchmark.py"
+    files-to-modify:
+      - "src/okina/analyzer.py (最適化)"
+    tests-to-create:
+      - "tests/test_analyzer_benchmark.py"
+    validation:
+      - "パフォーマンス要件を満たす"
+      - "メモリ使用量が適切"
+      - "最適化効果が測定できる"
+
+  - id: "TASK-007"
+    title: "設定統合とドキュメント更新"
+    priority: "medium"
+    status: "pending"
+    estimated-hours: 2
+    dependencies: ["TASK-004"]
+    description: |
+      差分抽出システムの設定をsettings.yml.sampleに統合し、
+      ドキュメントを更新する。
+    acceptance-criteria:
+      - "settings.yml.sampleの差分抽出設定追加"
+      - "README.mdの差分抽出説明更新"
+      - "設定項目の説明追加"
+      - "使用例の追加"
+    files-to-create: []
+    files-to-modify:
+      - "config/settings.yml.sample"
+      - "README.md"
+      - "docs/DIFF_ANALYZER_GUIDE.md (新規作成)"
+    tests-to-create: []
+    validation:
+      - "設定例が実際に動作する"
+      - "ドキュメントが分かりやすい"
+      - "設定項目の説明が適切"
+
+testing-tasks:
+  - id: "TEST-001"
+    title: "ユニットテストの実装"
+    priority: "high"
+    status: "pending"
+    estimated-hours: 4
+    dependencies: ["TASK-001", "TASK-002", "TASK-003", "TASK-004"]
+    description: |
+      差分抽出システムの各コンポーネントのユニットテストを実装する。
+    test-files:
+      - "tests/test_analyzer_unit.py"
+    test-cases:
+      - "test_data_loading"
+      - "test_detect_added_items"
+      - "test_detect_removed_items"
+      - "test_detect_changed_items"
+      - "test_content_hash_optimization"
+      - "test_history_data_management"
+      - "test_schema_version_handling"
+      - "test_error_handling"
+    coverage-target: "95%"
+
+  - id: "TEST-002"
+    title: "統合テストの実装"
+    priority: "high"
+    status: "pending"
+    estimated-hours: 3
+    dependencies: ["TASK-004"]
+    description: |
+      差分抽出システム全体の統合テストを実装する。
+    test-files:
+      - "tests/test_analyzer_integration.py"
+    test-cases:
+      - "test_end_to_end_diff_analysis"
+      - "test_history_management_and_error_handling"
+      - "test_optimization_and_schema_handling"
+      - "test_large_dataset_handling"
+      - "test_multiple_source_processing"
+    coverage-target: "90%"
+
+  - id: "TEST-003"
+    title: "プロパティベーステストの実装"
+    priority: "medium"
+    status: "pending"
+    estimated-hours: 3
+    dependencies: ["TASK-001", "TASK-002", "TASK-003", "TASK-004"]
+    description: |
+      hypothesisを使用したプロパティベーステストを実装する。
+    test-files:
+      - "tests/test_analyzer_properties.py"
+    test-cases:
+      - "test_diff_detection_completeness"
+      - "test_id_uniqueness_guarantee"
+      - "test_content_hash_optimization_accuracy"
+      - "test_change_detection_symmetry"
+      - "test_history_management_consistency"
+    coverage-target: "85%"
+
+  - id: "TEST-004"
+    title: "ベンチマークテストの実装"
+    priority: "medium"
+    status: "pending"
+    estimated-hours: 2
+    dependencies: ["TASK-004"]
+    description: |
+      パフォーマンス要件を検証するベンチマークテストを実装する。
+    test-files:
+      - "tests/test_analyzer_benchmark.py"
+    test-cases:
+      - "test_1000_items_performance"
+      - "test_content_hash_speedup"
+      - "test_memory_usage"
+      - "test_large_dataset_scalability"
+    performance-targets:
+      - "1000件データ < 1秒"
+      - "content_hash 10倍高速化"
+      - "メモリ使用量 < 入力データの3倍"
+
+documentation-tasks:
+  - id: "DOC-001"
+    title: "差分抽出ガイドの作成"
+    priority: "medium"
+    status: "pending"
+    estimated-hours: 2
+    dependencies: ["TASK-007"]
+    description: |
+      差分抽出システムの使用方法を詳しく説明するガイドを作成する。
+    files-to-create:
+      - "docs/DIFF_ANALYZER_GUIDE.md"
+    content:
+      - "差分抽出の仕組み"
+      - "設定方法"
+      - "パフォーマンス最適化"
+      - "トラブルシューティング"
+
+  - id: "DOC-002"
+    title: "アルゴリズム仕様書の作成"
+    priority: "low"
+    status: "pending"
+    estimated-hours: 2
+    dependencies: ["TASK-002"]
+    description: |
+      差分抽出アルゴリズムの詳細仕様書を作成する。
+    files-to-create:
+      - "docs/DIFF_ALGORITHM_SPEC.md"
+    content:
+      - "IDベース比較アルゴリズム"
+      - "content_hash最適化"
+      - "フィールドレベル比較"
+      - "計算量分析"
+
+  - id: "DOC-003"
+    title: "API仕様書の作成"
+    priority: "low"
+    status: "pending"
+    estimated-hours: 1
+    dependencies: ["TASK-004"]
+    description: |
+      差分抽出システムのAPI仕様書を作成する。
+    files-to-create:
+      - "docs/DIFF_ANALYZER_API.md"
+    content:
+      - "DiffAnalyzerクラスの仕様"
+      - "ComparisonEngineクラスの仕様"
+      - "データ構造の定義"
+      - "エラーコードの定義"
+
+validation-tasks:
+  - id: "VAL-001"
+    title: "要件適合性の検証"
+    priority: "high"
+    status: "pending"
+    estimated-hours: 2
+    dependencies: ["TASK-001", "TASK-002", "TASK-003", "TASK-004", "TEST-001", "TEST-002"]
+    description: |
+      実装が要件定義に適合しているかを検証する。
+    validation-items:
+      - "AC-001: 新規追加の検出"
+      - "AC-002: 削除の検出"
+      - "AC-003: 内容変更の検出"
+      - "AC-004: content_hashによる高速化"
+      - "AC-005: スキーマバージョン対応"
+      - "AC-006: 履歴データの管理"
+      - "AC-007: エラー時の適切な処理"
+
+  - id: "VAL-002"
+    title: "パフォーマンス検証"
+    priority: "high"
+    status: "pending"
+    estimated-hours: 1
+    dependencies: ["TASK-006", "TEST-004"]
+    description: |
+      差分抽出システムのパフォーマンス要件を検証する。
+    performance-targets:
+      - "1000件のアイテム比較が1秒以内"
+      - "content_hash使用時は10倍高速化"
+      - "メモリ使用量は入力データサイズの3倍以内"
+    measurement-tools:
+      - "pytest-benchmark"
+      - "memory_profiler"
+      - "time.perf_counter()"
+
+  - id: "VAL-003"
+    title: "正確性検証"
+    priority: "high"
+    status: "pending"
+    estimated-hours: 1
+    dependencies: ["TEST-003"]
+    description: |
+      差分抽出の正確性をプロパティベーステストで検証する。
+    validation-properties:
+      - "差分検出の完全性"
+      - "ID一意性の保証"
+      - "content_hash最適化の正確性"
+      - "変更検出の対称性"
+      - "履歴管理の整合性"
+
+milestones:
+  - name: "M1: コア機能実装完了"
+    date: "2025-12-24"
+    tasks: ["TASK-001", "TASK-002", "TASK-003", "TASK-004"]
+    deliverables:
+      - "DataLoaderクラス"
+      - "ComparisonEngineクラス"
+      - "HistoryManagerクラス"
+      - "DiffAnalyzerクラス"
+
+  - name: "M2: テスト実装完了"
+    date: "2025-12-25"
+    tasks: ["TEST-001", "TEST-002", "TEST-003"]
+    deliverables:
+      - "ユニットテスト"
+      - "統合テスト"
+      - "プロパティベーステスト"
+
+  - name: "M3: 最適化・検証完了"
+    date: "2025-12-26"
+    tasks: ["TASK-006", "VAL-001", "VAL-002", "VAL-003"]
+    deliverables:
+      - "パフォーマンス最適化"
+      - "ベンチマークテスト"
+      - "要件適合性検証"
+      - "正確性検証"
+
+  - name: "M4: ドキュメント完了"
+    date: "2025-12-27"
+    tasks: ["TASK-007", "DOC-001", "DOC-002", "DOC-003"]
+    deliverables:
+      - "設定統合"
+      - "差分抽出ガイド"
+      - "アルゴリズム仕様書"
+      - "API仕様書"
+
+risks-and-mitigations:
+  - risk: "大容量データでのメモリ不足"
+    probability: "medium"
+    impact: "high"
+    mitigation: "データサイズ制限とストリーミング処理の検討"
+    
+  - risk: "ID重複による誤検知"
+    probability: "medium"
+    impact: "high"
+    mitigation: "ID一意性の検証とエラー報告の強化"
+    
+  - risk: "パフォーマンス要件未達"
+    probability: "low"
+    impact: "medium"
+    mitigation: "早期のベンチマーク実装と最適化"
+    
+  - risk: "スキーマ変更による互換性問題"
+    probability: "medium"
+    impact: "medium"
+    mitigation: "スキーマバージョン管理の強化"
+
+success-criteria:
+  - "全ての受け入れ基準（AC-001〜AC-007）が満たされている"
+  - "テストカバレッジが95%以上"
+  - "パフォーマンス要件が満たされている"
+  - "プロパティベーステストが全てパス"
+  - "実際の差分抽出が正確に動作する"
+  - "大容量データでも安定動作する"

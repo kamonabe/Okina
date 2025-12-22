@@ -1,0 +1,222 @@
+# 要件定義: Okina差分抽出システム
+
+metadata:
+  title: "Okina差分抽出システム"
+  feature: "diff-analyzer"
+  status: "draft"
+  created: "2025-12-22"
+  updated: "2025-12-22"
+  version: "1.0.0"
+  last_validated: null
+  validation_passed: null
+  complexity: "high"
+  estimated-hours: 16
+  dependencies: []
+
+overview:
+  description: |
+    Okinaの差分抽出システム。Input Providerが生成した正規化データ（JSON Lines）を
+    前回データと比較し、新規追加（added）、削除（removed）、内容変更（changed）を
+    検出する。Okinaの設計哲学「静かに見守り、前と違えば知らせ」の核心機能として、
+    確実で信頼性の高い差分検知を提供する。
+  background: |
+    ファームウェア・ソフトウェア更新の「気づかなかった」による事故を防ぐため、
+    Okinaは前回との変化を確実に検知する必要がある。差分抽出システムは、
+    正規化データの構造を理解し、IDベースの比較、内容変更の検出、
+    履歴管理との連携を行う重要なコンポーネントである。
+  goals:
+    - "確実な変化検知（新規追加・削除・内容変更）"
+    - "IDベースの一意性保証"
+    - "内容変更の詳細検出"
+    - "履歴データの適切な管理"
+    - "パフォーマンスの最適化"
+
+acceptance-criteria:
+  - id: "AC-001"
+    title: "新規追加の検出"
+    priority: "high"
+    type: "functional"
+    description: |
+      前回データに存在しないIDのアイテムを
+      新規追加として正確に検出できる
+    when: "今回データに新しいIDのアイテムが含まれている時"
+    then: "そのアイテムが新規追加として分類される"
+    examples:
+      - input: "前回: [id1, id2], 今回: [id1, id2, id3]"
+        output: "added: [id3のアイテム]"
+      - input: "前回: [], 今回: [id1, id2]"
+        output: "added: [id1, id2のアイテム]"
+
+  - id: "AC-002"
+    title: "削除の検出"
+    priority: "high"
+    type: "functional"
+    description: |
+      前回データに存在したが今回データに存在しないIDのアイテムを
+      削除として正確に検出できる
+    when: "前回データのIDが今回データに含まれていない時"
+    then: "そのアイテムが削除として分類される"
+    examples:
+      - input: "前回: [id1, id2, id3], 今回: [id1, id2]"
+        output: "removed: [id3のアイテム]"
+      - input: "前回: [id1], 今回: []"
+        output: "removed: [id1のアイテム]"
+
+  - id: "AC-003"
+    title: "内容変更の検出"
+    priority: "high"
+    type: "functional"
+    description: |
+      同じIDで内容が変更されたアイテムを
+      内容変更として正確に検出できる
+    when: "同じIDのアイテムで内容が異なる時"
+    then: "そのアイテムが内容変更として分類され、変更内容が特定される"
+    examples:
+      - input: "前回: {id: 'id1', title: 'v1.0'}, 今回: {id: 'id1', title: 'v1.1'}"
+        output: "changed: [id1のアイテム], changes: ['title: v1.0 → v1.1']"
+      - input: "前回: {id: 'id1', url: 'url1'}, 今回: {id: 'id1', url: 'url2'}"
+        output: "changed: [id1のアイテム], changes: ['url: url1 → url2']"
+
+  - id: "AC-004"
+    title: "content_hashによる高速化"
+    priority: "medium"
+    type: "functional"
+    description: |
+      content_hashフィールドが存在する場合、
+      ハッシュ値比較による高速な変更検知ができる
+    when: "アイテムにcontent_hashフィールドが含まれている時"
+    then: "ハッシュ値比較で変更の有無を高速判定する"
+    examples:
+      - input: "前回: {id: 'id1', content_hash: 'hash1'}, 今回: {id: 'id1', content_hash: 'hash1'}"
+        output: "変更なし（詳細比較スキップ）"
+      - input: "前回: {id: 'id1', content_hash: 'hash1'}, 今回: {id: 'id1', content_hash: 'hash2'}"
+        output: "変更あり（詳細比較実行）"
+
+  - id: "AC-005"
+    title: "スキーマバージョン対応"
+    priority: "medium"
+    type: "functional"
+    description: |
+      異なるスキーマバージョンのデータに対して
+      適切な処理を行い、警告を出力する
+    when: "前回と今回でスキーマバージョンが異なる時"
+    then: "警告を出力し、可能な範囲で比較を実行する"
+    examples:
+      - input: "前回: schema v1, 今回: schema v2"
+        output: "警告出力、互換性のある範囲で比較実行"
+
+  - id: "AC-006"
+    title: "履歴データの管理"
+    priority: "high"
+    type: "functional"
+    description: |
+      正常終了時のみ今回データを履歴として保存し、
+      次回実行時の比較に使用する
+    when: "差分抽出が正常に完了した時"
+    then: "今回データが履歴ディレクトリに保存される"
+    examples:
+      - input: "差分抽出正常完了"
+        output: "data/history/{source}_{timestamp}.json に保存"
+      - input: "差分抽出でエラー発生"
+        output: "履歴データは更新されない"
+
+  - id: "AC-007"
+    title: "エラー時の適切な処理"
+    priority: "high"
+    type: "functional"
+    description: |
+      データ読み込みエラー、解析エラー、比較エラーに対して
+      適切なエラーハンドリングを行う
+    when: "各種エラーが発生した時"
+    then: "適切なエラーメッセージを出力し、処理を継続する"
+    examples:
+      - input: "正規化データが読み込めない"
+        output: "エラーメッセージ出力、通知システムに異常報告"
+      - input: "前回データが存在しない"
+        output: "初回実行として処理、全データを新規追加扱い"
+
+non-functional-requirements:
+  performance:
+    - "1000件のアイテム比較が1秒以内"
+    - "content_hash使用時は10倍高速化"
+    - "メモリ使用量は入力データサイズの3倍以内"
+  reliability:
+    - "データ破損時も適切にエラー処理"
+    - "部分的なデータ異常でも可能な範囲で処理継続"
+    - "履歴データの整合性保証"
+  maintainability:
+    - "新しいスキーマバージョンに容易に対応"
+    - "比較ロジックが理解しやすい"
+    - "デバッグ情報が充実"
+  usability:
+    - "差分結果が分かりやすい形式"
+    - "エラーメッセージが具体的"
+    - "進行状況が適切に表示"
+  scalability:
+    - "10,000件のアイテムまで対応"
+    - "複数ソースの並列処理対応"
+
+constraints:
+  - "JSON Lines形式の正規化データのみ対応"
+  - "IDフィールドによる一意性前提"
+  - "Python 3.10+以上"
+  - "メモリ内処理（大容量データは対象外）"
+  - "スキーマバージョン okina.item.v1 対応"
+
+assumptions:
+  - "Input Providerが適切な正規化データを生成"
+  - "IDが同一論理対象で一意"
+  - "observed_atフィールドが適切に設定"
+  - "ファイルシステムが利用可能"
+  - "JSON形式のデータが正しい"
+
+risks:
+  - risk: "大容量データでのメモリ不足"
+    mitigation: "データサイズ制限とストリーミング処理検討"
+    probability: "low"
+    impact: "medium"
+  
+  - risk: "ID重複による誤検知"
+    mitigation: "ID一意性の検証とエラー報告"
+    probability: "medium"
+    impact: "high"
+  
+  - risk: "スキーマ変更による互換性問題"
+    mitigation: "スキーマバージョン管理と後方互換性"
+    probability: "medium"
+    impact: "medium"
+  
+  - risk: "履歴データ破損"
+    mitigation: "バックアップ機能と復旧手順"
+    probability: "low"
+    impact: "high"
+
+scope:
+  in-scope:
+    - "JSON Lines形式の正規化データ比較"
+    - "新規追加・削除・内容変更の検出"
+    - "content_hashによる高速化"
+    - "履歴データ管理"
+    - "スキーマバージョン対応"
+    - "エラーハンドリング"
+  
+  out-of-scope:
+    - "正規化データの生成（Input Providerの責務）"
+    - "差分結果の通知（通知システムの責務）"
+    - "データの永続化（履歴管理以外）"
+    - "リアルタイム監視"
+    - "データ変換・正規化"
+    - "外部API連携"
+
+success-metrics:
+  quantitative:
+    - "テストカバレッジ95%以上を維持"
+    - "1000件データの処理時間1秒以内"
+    - "content_hash使用時10倍高速化達成"
+    - "新規テスト25件以上を追加"
+  
+  qualitative:
+    - "差分検知が確実で信頼性が高い"
+    - "エラー時も適切に処理が継続される"
+    - "履歴データが適切に管理される"
+    - "パフォーマンスが実用的"
