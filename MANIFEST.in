@@ -1,0 +1,15 @@
+include README.md
+include LICENSE
+include version.txt
+include requirements.txt
+include requirements-dev.txt
+include pytest.ini
+recursive-include config *.yml.sample
+recursive-include docs *.md
+recursive-exclude tests *
+recursive-exclude .kiro *
+recursive-exclude data *
+recursive-exclude log *
+recursive-exclude htmlcov *
+recursive-exclude .pytest_cache *
+recursive-exclude __pycache__ *

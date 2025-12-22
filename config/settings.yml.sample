@@ -1,0 +1,54 @@
+# Okina の設定ファイルサンプルです。
+# このファイルを settings.yml としてコピーして使用してください。
+
+profile:
+  usage: "dev"  # "production" または "dev"。本番環境では一部の動作が変化します。
+
+input:  # Input Provider設定
+  data_directory: "data/input"  # 正規化データ（.jsonl）の読み込み先
+  file_pattern: "*.jsonl"       # 読み込み対象ファイルパターン
+  
+storage:  # データ保存設定
+  history_directory: "data/history"  # 前回データの保存先
+  max_history_days: 30               # 履歴保持日数
+
+notifications:
+  slack:
+    enabled: true
+    # Webhook URLは環境変数からの読み込みを推奨（セキュリティ向上）
+    webhook_url: "env:OKINA_SLACK_WEBHOOK"
+    # または直接指定（Gitにコミットしないよう注意）
+    # webhook_url: "https://hooks.slack.com/services/xxxx/yyyy/zzzz"
+    
+    # 通知メッセージ設定
+    channel: "#alerts"
+    username: "Okina（翁）"
+    icon_emoji: ":older_man:"
+
+  discord:
+    enabled: false  # Discord通知を有効にする場合は true にしてください
+    webhook_url: "env:OKINA_DISCORD_WEBHOOK"
+
+  teams:
+    enabled: false  # Teams通知を有効にする場合は true にしてください
+    webhook_url: "env:OKINA_TEAMS_WEBHOOK"
+
+  email:
+    enabled: false  # メール通知を有効にする場合は true にしてください
+    smtp_server: "smtp.example.com"
+    smtp_port: 587
+    use_tls: true
+    from: "okina@example.com"
+    to: "admin@example.com"
+    username: "okina@example.com"
+    password: "env:OKINA_EMAIL_PASSWORD"
+
+output:  # 出力フォーマットの設定
+  default_mode: "normal"  # "normal" または "verbose"
+  max_items_per_notification: 10  # 1回の通知で表示する最大アイテム数
+  
+logging:  # ログ設定
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  file: "log/okina.log"
+  max_size_mb: 10
+  backup_count: 5

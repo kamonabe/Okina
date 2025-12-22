@@ -1,0 +1,7 @@
+# Okina 本番環境用依存パッケージ
+
+# 設定ファイル管理
+PyYAML>=6.0
+
+# HTTP通信（Webhook通知）
+requests>=2.31.0

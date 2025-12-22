@@ -1,0 +1,21 @@
+# Okina 開発環境用依存パッケージ
+
+# 本番環境の依存関係を含める
+-r requirements.txt
+
+# テストフレームワーク
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-mock>=3.11.0
+
+# プロパティベーステスト
+hypothesis>=6.82.0
+
+# コードフォーマット・リント
+black>=23.7.0
+flake8>=6.0.0
+mypy>=1.5.0
+
+# ビルド・パッケージング
+build>=0.10.0
+twine>=4.0.0
