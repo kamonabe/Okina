@@ -1,13 +1,13 @@
-# 設計書: 通知システム
+# 設計書: {機能名}
 
 metadata:
-  title: "通知システム"
-  feature: "notification-system"
+  title: "{機能名}"
+  feature: "{feature-name}"
   status: "draft"  # draft | in-progress | completed | deprecated
-  created: "2026-01-06"
-  updated: "2026-01-06"
+  created: "YYYY-MM-DD"
+  updated: "YYYY-MM-DD"
   version: "1.0.0"  # Specのバージョン
-  last_validated: null  # 2026-01-06 or null
+  last_validated: null  # YYYY-MM-DD or null
   validation_passed: null  # true | false | null
 
 architecture:
@@ -37,7 +37,7 @@ architecture:
 
 modules:
   - name: "{モジュール名}"
-    path: "src/okina/{module_name}.py"
+    path: "src/{project}/{module_name}.py"
     description: |
       {このモジュールの詳細な説明。
       何を行うモジュールか、どのような機能を提供するか。}
@@ -142,7 +142,7 @@ configuration:
 
 dependencies:
   internal:
-    - "src.okina.{module}"
+    - "src.{project}.{module}"
   external:
     - name: "{パッケージ名}"
       version: ">=X.Y.Z"

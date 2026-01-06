@@ -1,14 +1,14 @@
-# タスクリスト: 通知システム
+# タスクリスト: {機能名}
 
 metadata:
-  title: "通知システム"
-  feature: "notification-system"
+  title: "{機能名}"
+  feature: "{feature-name}"
   status: "pending"  # pending | in-progress | completed
-  created: "2026-01-06"
-  updated: "2026-01-06"
-  completed: null  # 2026-01-06
+  created: "YYYY-MM-DD"
+  updated: "YYYY-MM-DD"
+  completed: null  # YYYY-MM-DD
   version: "1.0.0"  # Specのバージョン
-  last_validated: null  # 2026-01-06 or null
+  last_validated: null  # YYYY-MM-DD or null
   validation_passed: null  # true | false | null
 
 tasks:
@@ -28,7 +28,7 @@ tasks:
       - "{サブタスク2}"
       - "{サブタスク3}"
     files:
-      - path: "src/okina/{module}.py"
+      - path: "src/{project}/{module}.py"
         action: "create"  # create | update | delete
         lines: 200
     tests: []
@@ -47,7 +47,7 @@ tasks:
       - "{サブタスク1}"
       - "{サブタスク2}"
     files:
-      - path: "src/okina/{module}.py"
+      - path: "src/{project}/{module}.py"
         action: "update"
         lines: 30
     tests: []
