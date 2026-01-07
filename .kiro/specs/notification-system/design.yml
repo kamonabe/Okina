@@ -3,224 +3,307 @@
 metadata:
   title: "通知システム"
   feature: "notification-system"
-  status: "draft"  # draft | in-progress | completed | deprecated
+  status: "in-progress"  # draft | in-progress | completed | deprecated
   created: "2026-01-06"
-  updated: "2026-01-06"
-  version: "1.0.0"  # Specのバージョン
-  last_validated: null  # 2026-01-06 or null
-  validation_passed: null  # true | false | null
+  updated: "2026-01-07"
+  version: "2.0.0"  # Specのバージョン
+  last_validated: "2026-01-07"  # 2026-01-06 or null
+  validation_passed: true  # true | false | null
 
 architecture:
   overview: |
-    {システム全体のアーキテクチャ概要。
-    どのモジュールがどのように連携するか、データフローはどうなっているか。}
+    通知システムは3つの主要コンポーネントで構成されます：
+    1. NotificationManager: 通知の統合管理と設定読み込み
+    2. MessageFormatter: 翁らしいメッセージの生成
+    3. SlackNotifier: Slack API経由での通知送信
+    
+    外部cronからの定期実行により、変化検知結果とエラー情報を
+    適切なタイミングで適切な通知先に送信します。
   
   components:
-    - name: "{コンポーネント名1}"
-      type: "module"  # module | class | function
-      responsibility: "{このコンポーネントの責務}"
-      dependencies: ["{依存先1}", "{依存先2}"]
+    - name: "NotificationManager"
+      type: "class"
+      responsibility: "通知の統合管理、設定読み込み、通知先振り分け"
+      dependencies: ["MessageFormatter", "SlackNotifier", "config/notification.yml"]
     
-    - name: "{コンポーネント名2}"
-      type: "module"
-      responsibility: "{このコンポーネントの責務}"
-      dependencies: ["{依存先1}"]
+    - name: "MessageFormatter"
+      type: "class"
+      responsibility: "翁らしいメッセージフォーマット生成"
+      dependencies: []
+    
+    - name: "SlackNotifier"
+      type: "class"
+      responsibility: "Slack API経由での通知送信"
+      dependencies: ["requests"]
   
   data-flow:
-    - from: "{起点}"
-      to: "{終点}"
-      description: "{データの流れの説明}"
+    - from: "外部cron"
+      to: "NotificationManager"
+      description: "定期実行による通知処理開始"
     
-    - from: "{起点}"
-      to: "{終点}"
-      description: "{データの流れの説明}"
+    - from: "NotificationManager"
+      to: "MessageFormatter"
+      description: "変化データ・エラーデータをメッセージ化"
+    
+    - from: "MessageFormatter"
+      to: "SlackNotifier"
+      description: "フォーマット済みメッセージを通知送信"
 
 modules:
-  - name: "{モジュール名}"
-    path: "src/okina/{module_name}.py"
+  - name: "notification"
+    path: "src/okina/notification.py"
     description: |
-      {このモジュールの詳細な説明。
-      何を行うモジュールか、どのような機能を提供するか。}
+      通知システムのメインモジュール。
+      NotificationManager、MessageFormatter、SlackNotifierクラスを提供し、
+      翁らしい静かで簡潔な通知機能を実現します。
     
     functions:
-      - name: "{関数名}"
+      - name: "NotificationManager.__init__"
         parameters:
-          - name: "{パラメータ名}"
-            type: "{型}"
-            description: "{説明}"
+          - name: "config"
+            type: "Dict[str, Any]"
+            description: "通知設定辞書"
         returns:
-          type: "{戻り値の型}"
-          description: "{戻り値の説明}"
+          type: "None"
+          description: "初期化完了"
         raises:
-          - "{例外名}: {発生条件}"
+          - "NotificationError: 設定読み込み失敗時"
+      
+      - name: "NotificationManager.send_change_notification"
+        parameters:
+          - name: "changes"
+            type: "Dict[str, int]"
+            description: "変化統計 {'added': N, 'changed': N, 'removed': N}"
+          - name: "source"
+            type: "str"
+            description: "データソース名"
+        returns:
+          type: "bool"
+          description: "通知送信成功可否"
+        raises:
+          - "NotificationError: 通知送信失敗時"
+      
+      - name: "MessageFormatter.format_change_message"
+        parameters:
+          - name: "changes"
+            type: "Dict[str, int]"
+            description: "変化統計"
+          - name: "source"
+            type: "str"
+            description: "データソース名"
+          - name: "timestamp"
+            type: "Optional[datetime]"
+            description: "タイムスタンプ"
+        returns:
+          type: "str"
+          description: "翁らしいメッセージ"
+        raises: []
 
 correctness-properties:
   - id: "P1"
-    title: "{プロパティのタイトル}"
-    type: "invariant"  # invariant | idempotence | monotonicity | boundary
+    title: "翁らしいメッセージの一貫性"
+    type: "invariant"
     description: |
-      {このプロパティの詳細な説明。
-      どのような性質が常に成り立つべきか、数学的にどう表現されるか。}
-    validates: ["AC-001", "AC-002"]
-    test-strategy: "property-based"  # property-based | integration | unit
+      MessageFormatterが生成するメッセージは常に翁らしい特徴を持つ：
+      - 絵文字を含まない
+      - 判断的でない事実ベースの内容
+      - 簡潔で静かなトーン
+      - 必要な情報のみを含む
+    validates: ["AC-001"]
+    test-strategy: "property-based"
     implementation:
-      framework: "hypothesis"  # hypothesis | pytest
-      strategy: "st.integers(min_value=1, max_value=10)"
-      assertion: "{検証する条件}"
+      framework: "hypothesis"
+      strategy: "st.dictionaries(st.sampled_from(['added', 'changed', 'removed']), st.integers(min_value=0, max_value=100))"
+      assertion: "メッセージに絵文字が含まれず、事実のみが記載される"
   
   - id: "P2"
-    title: "{プロパティのタイトル}"
+    title: "通知送信の冪等性"
     type: "idempotence"
     description: |
-      {プロパティの説明}
-    validates: ["AC-003"]
+      同じ変化データで複数回通知を送信しても、
+      送信先には同じメッセージが送信される（副作用なし）
+    validates: ["AC-002"]
     test-strategy: "property-based"
     implementation:
       framework: "hypothesis"
-      strategy: "st.text(min_size=1, max_size=20)"
-      assertion: "{検証する条件}"
+      strategy: "st.dictionaries(st.sampled_from(['added', 'changed', 'removed']), st.integers(min_value=0))"
+      assertion: "複数回実行しても同じメッセージが生成される"
   
   - id: "P3"
-    title: "{プロパティのタイトル}"
-    type: "monotonicity"
+    title: "エラー時継続性の保証"
+    type: "invariant"
     description: |
-      {プロパティの説明}
-    validates: ["AC-004"]
+      通知送信でエラーが発生しても、処理は継続され、
+      翁らしく静かにエラーを記録する
+    validates: ["AC-005"]
     test-strategy: "property-based"
     implementation:
       framework: "hypothesis"
-      strategy: "st.lists(...)"
-      assertion: "{検証する条件}"
+      strategy: "st.text(min_size=1, max_size=100)"
+      assertion: "例外発生時も処理が継続され、適切にログが記録される"
 
 data-structures:
-  - name: "{データ構造名}"
-    type: "dict"  # dict | list | class | namedtuple
+  - name: "NotificationConfig"
+    type: "dict"
     schema:
-      field1:
-        type: "str"
+      change_reports:
+        type: "dict"
         required: true
-        description: "{フィールドの説明}"
-      field2:
+        description: "運用チーム向け変化通知設定"
+      error_alerts:
+        type: "dict"
+        required: true
+        description: "開発チーム向けエラー通知設定"
+  
+  - name: "ChangeData"
+    type: "dict"
+    schema:
+      added:
         type: "int"
         required: true
-        description: "{フィールドの説明}"
-      field3:
-        type: "float"
-        required: false
-        default: 0.0
-        description: "{フィールドの説明}"
+        description: "新規追加件数"
+      changed:
+        type: "int"
+        required: true
+        description: "内容変更件数"
+      removed:
+        type: "int"
+        required: true
+        description: "削除件数"
+  
+  - name: "SlackConfig"
+    type: "dict"
+    schema:
+      webhook_url:
+        type: "str"
+        required: true
+        description: "Slack Webhook URL（環境変数参照可能）"
+      channel:
+        type: "str"
+        required: true
+        description: "通知先チャンネル名"
 
 error-handling:
-  - error: "{例外名}"
-    handling: "continue"  # continue | stop | retry
-    message: "{エラーメッセージ}"
-    log-level: "debug"  # debug | info | warning | error
+  - error: "NotificationError"
+    handling: "continue"
+    message: "通知送信に失敗しましたが、処理を継続します"
+    log-level: "warning"
   
-  - error: "{例外名}"
+  - error: "ConfigurationError"
     handling: "stop"
-    message: "{エラーメッセージ}"
+    message: "設定ファイルの読み込みに失敗しました"
     log-level: "error"
     exit-code: 1
+  
+  - error: "SlackAPIError"
+    handling: "continue"
+    message: "Slack API呼び出しに失敗しました"
+    log-level: "warning"
 
 configuration:
-  - name: "{設定項目名}"
-    type: "bool"  # bool | str | int | float | dict | list
+  - name: "weekends"
+    type: "bool"
     required: false
-    default: true
-    description: "{設定項目の説明}"
+    default: false
+    description: "運用チーム向け通知の土日送信可否"
     validation:
-      - "{検証ルール1}"
-      - "{検証ルール2}"
+      - "boolean値である"
   
-  - name: "{設定項目名}"
+  - name: "schedule"
     type: "str"
-    required: false
-    default: "normal"
-    description: "{設定項目の説明}"
+    required: true
+    default: "daily"
+    description: "通知スケジュール（daily/hourly）"
     validation:
-      - "{検証ルール}"
+      - "daily または hourly である"
+  
+  - name: "webhook_url"
+    type: "str"
+    required: true
+    default: "env:SLACK_WEBHOOK"
+    description: "Slack Webhook URL"
+    validation:
+      - "https://hooks.slack.com/ で始まるか env: で始まる"
 
 dependencies:
   internal:
-    - "src.okina.{module}"
+    - "src.okina.exceptions"
   external:
-    - name: "{パッケージ名}"
-      version: ">=X.Y.Z"
-      purpose: "{使用目的}"
+    - name: "requests"
+      version: ">=2.25.0"
+      purpose: "Slack API HTTP通信"
+    - name: "pyyaml"
+      version: ">=5.4.0"
+      purpose: "設定ファイル読み込み"
 
 testing-strategy:
   property-tests:
     - property: "P1"
-      file: "tests/test_{module}_properties.py"
-      function: "test_property_{name}"
-    
-    - property: "P2"
-      file: "tests/test_{module}_properties.py"
-      function: "test_property_{name}"
+      file: "tests/test_notification_okina.py"
+      function: "test_okina_behavior_properties"
   
   integration-tests:
-    - validates: ["AC-001", "AC-002"]
-      file: "tests/test_{module}_integration.py"
-      function: "test_end_to_end_{feature}"
-    
-    - validates: ["AC-003"]
-      file: "tests/test_{module}_integration.py"
-      function: "test_config_loading"
+    - validates: ["AC-002", "AC-003"]
+      file: "tests/test_notification_okina.py"
+      function: "test_notification_manager_integration"
   
   unit-tests:
     - validates: ["AC-001"]
-      file: "tests/test_{module}_unit.py"
-      function: "test_{function_name}"
+      file: "tests/test_notification_okina.py"
+      function: "test_message_formatter_unit"
     
-    - validates: ["AC-002"]
-      file: "tests/test_{module}_unit.py"
-      function: "test_{function_name}"
+    - validates: ["AC-005"]
+      file: "tests/test_notification_okina.py"
+      function: "test_error_handling_unit"
 
 performance:
   targets:
-    - metric: "{メトリクス名}"
-      target: "< 100ms"
-      measurement: "{計測方法}"
+    - metric: "通知送信時間"
+      target: "< 30秒"
+      measurement: "Slack API レスポンス時間計測"
     
-    - metric: "{メトリクス名}"
-      target: "< 10% increase"
-      measurement: "{計測方法}"
+    - metric: "メッセージ生成時間"
+      target: "< 1秒"
+      measurement: "1000件変化データ処理時間"
 
 security:
   considerations:
-    - "{セキュリティ考慮事項1}"
-    - "{セキュリティ考慮事項2}"
-    - "{セキュリティ考慮事項3}"
+    - "Webhook URLを環境変数で管理し、設定ファイルに直接記載しない"
+    - "設定ファイルサンプルには実際のWebhook URLを含めない"
+    - "ログにWebhook URLを出力しない"
 
 resilience:
   circuit-breaker:
     considered: true
-    decision: "not-adopted"  # adopted | not-adopted | delegated | not-applicable
+    decision: "not-adopted"
     rationale: |
-      {採用/不採用の理由。
-      なぜこの判断をしたのか、将来どうすべきかを明記。}
-    delegated-to: "upstream-system"  # 委譲先（delegatedの場合）
+      初回リリースではシンプルさを優先し、サーキットブレーカーは実装しない。
+      Slack API の安定性は高く、失敗時は静かに記録して継続する翁らしいアプローチで十分。
+    delegated-to: null
     future-notes: |
-      {将来の検討事項}
+      将来的に通知頻度が高くなった場合は検討する。
   
   notification-throttling:
     considered: true
-    decision: "adopted"
+    decision: "not-adopted"
     rationale: |
-      {採用理由}
-    implementation:
-      - "{実装方針1}"
-      - "{実装方針2}"
+      外部cron依存により通知頻度は制御済み。
+      運用チーム：1日1回、開発チーム：営業時間内毎時のため、
+      スロットリングは不要。
+    implementation: []
   
   baseline-reset:
     considered: true
     decision: "not-applicable"
     rationale: |
-      {不適用の理由}
+      通知システムは状態を持たないため、ベースラインリセットは不適用。
+      各通知は独立して処理される。
     implementation: []
   
   other-considerations:
-    - consideration: "{その他の考慮事項}"
+    - consideration: "設定ファイル読み込み失敗時の対応"
       decision: "adopted"
       rationale: |
-        {判断理由}
+        設定ファイルが読み込めない場合は処理を停止し、
+        明確なエラーメッセージを出力する。
+        翁らしく静かに失敗するのではなく、設定問題は明確に伝える。

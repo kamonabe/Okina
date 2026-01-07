@@ -3,31 +3,34 @@
 metadata:
   title: "通知システム"
   feature: "notification-system"
-  status: "draft"  # draft | in-progress | completed | deprecated
+  status: "in-progress"  # draft | in-progress | completed | deprecated
   created: "2026-01-06"
-  updated: "2026-01-06"
-  version: "1.0.0"  # Specのバージョン
-  last_validated: null  # 2026-01-06 or null
-  validation_passed: null  # true | false | null
+  updated: "2026-01-07"
+  version: "2.0.0"  # Specのバージョン
+  last_validated: "2026-01-07"  # 2026-01-06 or null
+  validation_passed: true  # true | false | null
   complexity: "medium"  # low | medium | high
-  estimated-hours: 8
+  estimated-hours: 12
   dependencies: []
 
 overview:
   description: |
-    Okinaの通知システムは、変化検知結果を複数のプラットフォームに
-    翁らしい静かで簡潔なメッセージで通知する機能です。
-    判断的でない事実ベースの情報提供により、人間の意思決定を支援します。
+    Okinaの通知システムは、変化検知結果とエラー情報を
+    翁らしい静かで簡潔なメッセージでSlackに通知する機能です。
+    初回リリースではSlackのみ対応し、運用チームと開発チームに
+    異なるタイミングで適切な情報を提供します。
   background: |
-    現在のOkinaには変化検知機能の仕様はあるものの、通知システムが未実装です。
-    変化を検知しても適切に人間に伝える手段がなければ、
-    「気づかなかった」による事故を防ぐという目的を達成できません。
-    翁らしい控えめで事実ベースの通知が必要です。
+    通知設計の詳細化により、以下が明確になりました：
+    - 通知レベル: 変化検知（運用向け）とエラー発生（開発向け）の2段階
+    - 通知先分離: 運用チームと開発チームで異なる通知先
+    - スケジュール: 外部cron依存でシンプルな実装
+    - メッセージ: 絵文字なし、シンプルで事実ベース
   goals:
-    - "変化検知結果を確実に人間に伝達する"
+    - "変化検知結果を運用チームに1日1回定期報告する"
+    - "エラー発生を開発チームに営業時間内で時次報告する"
     - "翁らしい静かで簡潔なメッセージ形式を実現する"
-    - "複数の通知プラットフォームに対応する"
-    - "判断的でない事実ベースの情報提供を行う"
+    - "Slack通知の確実な送信を行う"
+    - "外部cron依存でシンプルな実装を維持する"
 
 acceptance-criteria:
   - id: "AC-001"
@@ -36,97 +39,155 @@ acceptance-criteria:
     type: "functional"
     description: |
       通知メッセージは翁らしい静かで簡潔な形式で生成され、
-      判断的でない事実ベースの内容のみを含む必要があります。
-    when: "変化検知結果を通知する時"
+      絵文字を使わず、判断的でない事実ベースの内容のみを含む必要があります。
+    when: "変化検知結果またはエラーを通知する時"
     then: "静かで簡潔、事実のみのメッセージが生成される"
     examples:
       - input: "新規追加2件、内容変更1件の変化"
-        output: "🏮 Okina（翁）からのお知らせ\n✨ 新規追加: 2件\n🔄 内容変更: 1件\n詳細は okina history で確認できます"
+        output: "変化を検知しました\n\nソース: fortinet-docs\n新規追加: 2件\n内容変更: 1件\n削除: 0件\n時刻: 2026-01-07 09:00"
+      - input: "API接続エラー"
+        output: "エラーを検知しました\n\n種類: 接続エラー\n詳細: API接続がタイムアウトしました\nソース: fortinet-docs\n時刻: 2026-01-07 14:00"
       - input: "変化なし"
         output: "通知なし（変化がない場合は静かに見守る）"
   
   - id: "AC-002"
-    title: "複数プラットフォーム対応"
+    title: "通知先分離"
     priority: "high"
     type: "functional"
     description: |
-      Slack、Discord、Teams、Emailの複数プラットフォームに
-      同一の翁らしいメッセージを送信できる必要があります。
-    when: "通知設定で複数プラットフォームが有効な時"
-    then: "全ての有効なプラットフォームに同じメッセージが送信される"
+      変化検知は運用チーム向け、エラー発生は開発チーム向けに
+      異なるSlackチャンネルに通知する必要があります。
+    when: "通知種別に応じて"
+    then: "適切な通知先に送信される"
     examples:
-      - input: "Slack + Discord が有効"
-        output: "両方のプラットフォームに同じ翁らしいメッセージを送信"
-      - input: "Email のみ有効"
-        output: "Email にのみメッセージを送信"
+      - input: "変化検知結果"
+        output: "運用チーム向けSlackチャンネルに送信"
+      - input: "エラー発生"
+        output: "開発チーム向けSlackチャンネルに送信"
   
   - id: "AC-003"
+    title: "スケジュール通知"
+    priority: "high"
+    type: "functional"
+    description: |
+      運用チームには1日1回（朝9時）、開発チームには営業時間内（9-18時）の
+      毎時00分に通知を送信する。通知対象がない場合は何も送信しない。
+    when: "スケジュールされた時刻に"
+    then: "対象がある場合のみ通知が送信される"
+    examples:
+      - input: "朝9時、変化あり"
+        output: "運用チームに変化検知通知を送信"
+      - input: "14時00分、エラーあり"
+        output: "開発チームにエラー通知を送信"
+      - input: "朝9時、変化なし"
+        output: "通知なし（異常なし通知は行わない）"
+  
+  - id: "AC-004"
+    title: "土日設定"
+    priority: "medium"
+    type: "functional"
+    description: |
+      運用チーム向け通知の土日送信可否を設定で制御できる。
+      デフォルトでは土日は通知しない。
+    when: "土日に変化検知結果がある時"
+    then: "設定に応じて通知する/しないが決まる"
+    examples:
+      - input: "土曜日、weekends: false"
+        output: "通知なし"
+      - input: "土曜日、weekends: true"
+        output: "通知送信"
+  
+  - id: "AC-005"
     title: "エラー時の継続性"
     priority: "medium"
     type: "functional"
     description: |
-      一部のプラットフォームで通知に失敗しても、
-      他のプラットフォームへの通知は継続し、翁らしく静かに処理を続ける。
-    when: "一部の通知プラットフォームでエラーが発生した時"
-    then: "他のプラットフォームへの通知は継続され、エラーは静かに記録される"
+      通知送信に失敗しても、翁らしく静かに処理を続ける。
+      エラーは記録するが、処理は中断しない。
+    when: "Slack通知でエラーが発生した時"
+    then: "エラーを記録し、処理は継続される"
     examples:
-      - input: "Slack エラー、Discord 正常"
-        output: "Discord への通知は成功、Slack エラーは静かに記録"
+      - input: "Slack API エラー"
+        output: "エラーログ記録、処理継続"
 
 non-functional-requirements:
   performance:
     - "通知送信が30秒以内に完了する"
     - "1000件の変化アイテムを1秒以内で処理できる"
+    - "cron実行時の処理時間が最小限である"
   reliability:
     - "通知失敗時も処理を継続する（翁らしい継続性）"
-    - "部分的な失敗でも可能な限り通知を送信する"
+    - "Slack API エラー時も静かに記録して継続する"
+    - "設定ファイル読み込みエラー時も適切に処理する"
   maintainability:
-    - "新しい通知プラットフォームを簡単に追加できる"
-    - "メッセージテンプレートを設定ファイルで管理する"
+    - "config/notification.yml で設定を管理する"
+    - "メッセージテンプレートをコード内で管理する"
+    - "将来の他プラットフォーム対応が容易である"
   usability:
     - "メッセージは翁らしく静かで簡潔である"
     - "事実のみを伝え、判断的な内容を含まない"
+    - "絵文字を使わずシンプルなテキストである"
+    - "cron設定が簡単である"
 
 constraints:
-  - "{制約1: 例: AlmaLinux 9専用}"
-  - "{制約2: 例: Python 3.10+以上}"
-  - "{制約3: 例: 特定のライブラリに依存}"
+  - "AlmaLinux 9専用（Linuxサーバー環境）"
+  - "Python 3.10+以上"
+  - "外部cron依存（内蔵スケジューラーなし）"
+  - "初回リリースはSlackのみ対応"
+  - "設定ファイルはYAML形式"
 
 assumptions:
-  - "{前提1: 例: ユーザーは日本語話者}"
-  - "{前提2: 例: 特定のコマンドで実行される}"
-  - "{前提3: 例: データは特定の形式}"
+  - "ユーザーは日本語話者"
+  - "cron設定が可能な環境"
+  - "Slack Webhook URLが取得済み"
+  - "運用チームと開発チームで異なるSlackチャンネルを使用"
+  - "営業時間は9-18時と定義"
 
 risks:
-  - risk: "{リスク1の説明}"
-    mitigation: "{対策1}"
-    probability: "low"  # low | medium | high
-    impact: "high"  # low | medium | high
-  
-  - risk: "{リスク2の説明}"
-    mitigation: "{対策2}"
-    probability: "medium"
+  - risk: "Slack API の仕様変更"
+    mitigation: "requests ライブラリ使用で標準的なHTTP通信を維持"
+    probability: "low"
     impact: "medium"
+  
+  - risk: "cron設定ミスによる通知漏れ"
+    mitigation: "設定例とドキュメントを充実させる"
+    probability: "medium"
+    impact: "high"
+  
+  - risk: "設定ファイルの機密情報漏洩"
+    mitigation: "環境変数使用を推奨、サンプルファイルで注意喚起"
+    probability: "medium"
+    impact: "high"
 
 scope:
   in-scope:
-    - "{スコープ内の項目1}"
-    - "{スコープ内の項目2}"
-    - "{スコープ内の項目3}"
+    - "Slack通知機能"
+    - "変化検知とエラーの2種類通知"
+    - "運用チーム・開発チーム向け通知先分離"
+    - "スケジュール通知（外部cron依存）"
+    - "土日設定機能"
+    - "config/notification.yml 設定管理"
+    - "翁らしいメッセージフォーマット"
+    - "エラー時継続性"
   
   out-of-scope:
-    - "{スコープ外の項目1: 例: 自動実行機能（ユーザーが手動で実行）}"
-    - "{スコープ外の項目2: 例: 履歴記録（将来の拡張として検討）}"
-    - "{スコープ外の項目3: 例: リアルタイム監視（現状の定期実行を維持）}"
+    - "他プラットフォーム（Discord、Teams、Email等）"
+    - "内蔵スケジューラー機能"
+    - "通知履歴管理"
+    - "Web UI設定画面"
+    - "エラー集約機能"
+    - "リアルタイム通知"
+    - "通知の既読管理"
 
 success-metrics:
   quantitative:
-    - "{定量的指標1: 例: テストカバレッジ95%以上を維持}"
-    - "{定量的指標2: 例: 全既存テストがパス}"
-    - "{定量的指標3: 例: 処理時間が目標値以内}"
-    - "{定量的指標4: 例: 新規テストN件を追加}"
+    - "テストカバレッジ90%以上を維持"
+    - "全既存テストがパス"
+    - "翁らしさテスト21件が全て通過"
+    - "通知送信成功率95%以上"
   
   qualitative:
-    - "{定性的指標1: 例: ユーザーが便利と感じる}"
-    - "{定性的指標2: 例: アクションが明確になる}"
-    - "{定性的指標3: 例: ツールの価値が向上}"
+    - "運用チームが変化を適切に把握できる"
+    - "開発チームがエラーを迅速に認識できる"
+    - "翁らしい静かで簡潔なメッセージが実現される"
+    - "cron設定が簡単で運用しやすい"
