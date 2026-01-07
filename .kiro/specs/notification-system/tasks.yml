@@ -13,41 +13,50 @@ metadata:
 
 tasks:
   - id: "T1"
-    title: "{タスクのタイトル}"
-    status: "pending"  # pending | in-progress | done
-    priority: "high"  # high | medium | low
-    estimated-hours: 2
+    title: "NotificationManagerクラスの実装"
+    status: "pending"
+    priority: "high"
+    estimated-hours: 3
     actual-hours: null
     depends-on: []
-    validates: ["AC-001", "AC-002"]
+    validates: ["AC-001", "AC-002", "AC-003"]
     description: |
-      {このタスクの詳細な説明。
-      何を行うタスクか、どのような成果物を作成するか。}
+      通知システムの中核となるNotificationManagerクラスを実装。
+      複数プラットフォームへの通知送信を統合管理し、
+      翁らしい継続性を重視したエラーハンドリングを提供する。
     subtasks:
-      - "{サブタスク1}"
-      - "{サブタスク2}"
-      - "{サブタスク3}"
+      - "src/okina/notification.pyファイルを作成"
+      - "NotificationManagerクラスの基本構造を実装"
+      - "send_change_notification()メソッドを実装"
+      - "send_error_notification()メソッドを実装"
+      - "環境変数解決機能を実装"
     files:
-      - path: "src/okina/{module}.py"
-        action: "create"  # create | update | delete
+      - path: "src/okina/notification.py"
+        action: "create"
         lines: 200
     tests: []
   
   - id: "T2"
-    title: "{タスクのタイトル}"
+    title: "MessageFormatterクラスの実装"
     status: "pending"
     priority: "high"
-    estimated-hours: 1
+    estimated-hours: 2
     actual-hours: null
     depends-on: ["T1"]
-    validates: ["AC-003"]
+    validates: ["AC-001"]
     description: |
-      {タスクの説明}
+      翁らしい静かで簡潔なメッセージを生成するMessageFormatterクラスを実装。
+      判断的でない事実ベースのメッセージ形式を確立する。
     subtasks:
-      - "{サブタスク1}"
-      - "{サブタスク2}"
+      - "MessageFormatterクラスを実装"
+      - "format_change_message()メソッドを実装"
+      - "format_error_message()メソッドを実装"
+      - "翁らしいメッセージテンプレートを定義"
     files:
-      - path: "src/okina/{module}.py"
+      - path: "src/okina/notification.py"
+        action: "update"
+        lines: 100
+    tests: []
         action: "update"
         lines: 30
     tests: []
