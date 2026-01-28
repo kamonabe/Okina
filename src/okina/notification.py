@@ -200,7 +200,6 @@ class SlackNotifier:
         """
         try:
             payload = {
-                "channel": self.channel,
                 "username": self.username,
                 "text": message,
                 "icon_emoji": ":older_man:",  # 翁の絵文字
@@ -335,6 +334,12 @@ class NotificationManager:
         """通知プラットフォームを初期化"""
         if "slack" in self.config:
             slack_config = self.config["slack"]
+            
+            # Slack通知が有効かチェック
+            if not slack_config.get("enabled", True):
+                logger.debug("Slack notifier is disabled")
+                return
+            
             webhook_url = self._resolve_env_var(slack_config.get("webhook_url", ""))
 
             if webhook_url:
@@ -343,7 +348,9 @@ class NotificationManager:
                     channel=slack_config.get("channel", "#alerts"),
                     username=slack_config.get("username", "Okina（翁）"),
                 )
-                logger.debug("Slack notifier initialized")
+                logger.debug(f"Slack notifier initialized with URL: {webhook_url[:50]}...")
+            else:
+                logger.warning("Slack webhook URL not configured or environment variable not set")
 
     def _resolve_env_var(self, value: str) -> str:
         """
