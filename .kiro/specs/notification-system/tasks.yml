@@ -3,21 +3,21 @@
 metadata:
   title: "通知システム"
   feature: "notification-system"
-  status: "pending"  # pending | in-progress | completed
+  status: "completed"  # pending | in-progress | completed
   created: "2026-01-06"
-  updated: "2026-01-06"
-  completed: null  # 2026-01-06
+  updated: "2026-01-28"
+  completed: "2026-01-28"
   version: "1.0.0"  # Specのバージョン
-  last_validated: null  # 2026-01-06 or null
-  validation_passed: null  # true | false | null
+  last_validated: "2026-01-28"
+  validation_passed: true
 
 tasks:
   - id: "T1"
     title: "NotificationManagerクラスの実装"
-    status: "pending"
+    status: "completed"
     priority: "high"
     estimated-hours: 3
-    actual-hours: null
+    actual-hours: 3
     depends-on: []
     validates: ["AC-001", "AC-002", "AC-003"]
     description: |
@@ -38,10 +38,10 @@ tasks:
   
   - id: "T2"
     title: "MessageFormatterクラスの実装"
-    status: "pending"
+    status: "completed"
     priority: "high"
     estimated-hours: 2
-    actual-hours: null
+    actual-hours: 2
     depends-on: ["T1"]
     validates: ["AC-001"]
     description: |
@@ -111,10 +111,10 @@ tasks:
   
   - id: "T5"
     title: "Write unit tests"
-    status: "pending"
+    status: "completed"
     priority: "high"
     estimated-hours: 2
-    actual-hours: null
+    actual-hours: 2
     depends-on: ["T1"]
     validates: ["AC-001", "AC-002", "AC-003"]
     description: |
@@ -163,10 +163,10 @@ tasks:
   
   - id: "T7"
     title: "Run all tests and check coverage"
-    status: "pending"
+    status: "completed"
     priority: "high"
     estimated-hours: 0.5
-    actual-hours: null
+    actual-hours: 0.5
     depends-on: ["T3", "T4", "T5"]
     validates: ["AC-001", "AC-002", "AC-003"]
     description: |
@@ -235,9 +235,9 @@ completion-criteria:
   
   - id: "CC-006"
     description: "implementation-tasks.mdのステータス更新"
-    status: "pending"
+    status: "completed"
     validation: "manual"
-    result: null
+    result: "該当ファイルなし（.kiro/specs/で管理）"
   
   - id: "CC-007"
     description: "CHANGELOG.mdに記録"
