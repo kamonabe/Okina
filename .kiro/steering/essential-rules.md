@@ -15,8 +15,18 @@ description: 全プロジェクト共通の必須ルール（軽量版）
 
 ## 🌍 基本環境
 
-### プラットフォーム
-- **AlmaLinux 9**（RHEL系Linux）
+### 開発に必要なもの
+- **コンピューター**: Windows/Mac/Linux どれでもOK
+- **インターネット**: GitHubに接続するため
+- **やる気**: これが一番大事！
+
+### 初めての方へ
+👉 **[初心者向けオンボーディングガイド](.kiro/steering-detailed/onboarding/00-welcome.md)**
+
+Linux/Git初心者でも1週間で開発に参加できるようになります！
+
+### 経験者の方へ（技術仕様）
+- **プラットフォーム**: AlmaLinux 9（RHEL系Linux）
 - **シェル**: bash
 - **パッケージ管理**: dnf/yum
 - **Python**: 3.10+以上
