@@ -45,23 +45,27 @@ class MessageFormatter:
     - 判断的でない事実ベース
     - 控えめで謙虚な表現
     - 人間の判断に委ねる姿勢
+    - 絵文字を使わない（端末互換性のため）
 
     Example:
         >>> formatter = MessageFormatter()
         >>> changes = {"added": 2, "changed": 1, "removed": 0}
         >>> message = formatter.format_change_message(changes, "fortinet-docs")
         >>> print(message)
-        🏮 Okina（翁）からのお知らせ
-        ✨ 新規追加: 2件
-        🔄 内容変更: 1件
-        詳細は okina history で確認できます
+        変化を検知しました
+        
+        ソース: fortinet-docs
+        新規追加: 2件
+        内容変更: 1件
+        時刻: 2026-01-28 09:00
     """
 
     def __init__(self) -> None:
         """MessageFormatterを初期化"""
         self._message_templates = {
-            "header": "🏮 Okina（翁）からのお知らせ",
-            "date_format": "%Y-%m-%d %H:%M:%S",
+            "header": "変化を検知しました",
+            "error_header": "エラーを検知しました",
+            "date_format": "%Y-%m-%d %H:%M",
             "footer": "詳細は okina history で確認できます",
         }
 
@@ -91,7 +95,7 @@ class MessageFormatter:
             >>> message = formatter.format_change_message(
             ...     changes, "fortinet-docs"
             ... )
-            >>> assert "🏮 Okina（翁）からのお知らせ" in message
+            >>> assert "変化を検知しました" in message
         """
         if not changes or all(count == 0 for count in changes.values()):
             # 変化がない場合は静かに見守る（通知しない）
@@ -102,22 +106,21 @@ class MessageFormatter:
         # 翁らしい静かで簡潔なメッセージを構築
         lines = [
             self._message_templates["header"],
-            f"📅 {timestamp.strftime(self._message_templates['date_format'])}",
-            f"🔍 ソース: {source}",
+            "",
+            f"ソース: {source}",
         ]
 
         # 変化の内容を事実ベースで記載
         if changes.get("added", 0) > 0:
-            lines.append(f"✨ 新規追加: {changes['added']}件")
+            lines.append(f"新規追加: {changes['added']}件")
 
         if changes.get("changed", 0) > 0:
-            lines.append(f"🔄 内容変更: {changes['changed']}件")
+            lines.append(f"内容変更: {changes['changed']}件")
 
         if changes.get("removed", 0) > 0:
-            lines.append(f"🗑️ 削除: {changes['removed']}件")
+            lines.append(f"削除: {changes['removed']}件")
 
-        lines.append("")
-        lines.append(self._message_templates["footer"])
+        lines.append(f"時刻: {timestamp.strftime(self._message_templates['date_format'])}")
 
         return "\n".join(lines)
 
@@ -143,21 +146,18 @@ class MessageFormatter:
         timestamp = datetime.now()
 
         lines = [
-            self._message_templates["header"],
-            f"📅 {timestamp.strftime(self._message_templates['date_format'])}",
+            self._message_templates["error_header"],
+            "",
         ]
 
         if source:
-            lines.append(f"🔍 ソース: {source}")
+            lines.append(f"ソース: {source}")
 
         lines.extend(
             [
-                "",
-                "⚠️ 問題が発生しましたが、監視は継続しています",
                 f"種類: {error_type}",
                 f"詳細: {error_message}",
-                "",
-                "翁は静かに見守り続けます",
+                f"時刻: {timestamp.strftime(self._message_templates['date_format'])}",
             ]
         )
 

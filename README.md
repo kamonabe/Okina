@@ -458,11 +458,12 @@ if __name__ == "__main__":
 ## 📚 ドキュメント
 
 - [プロジェクト構造](docs/PROJECT_STRUCTURE.md)
+- [使用例・出力例](docs/EXAMPLES.md) ✨ 新規追加
+- [変更履歴](docs/CHANGELOG.md) ✨ 新規追加
 - [コマンドリファレンス](docs/COMMAND_REFERENCE.md)
 - [設定リファレンス](docs/CONFIGURATION.md)
 - [Input Provider ガイド](docs/INPUT_PROVIDER_GUIDE.md)
 - [運用ガイド](docs/OPERATIONS.md)
-- [変更履歴](docs/CHANGELOG.md)
 
 ---
 

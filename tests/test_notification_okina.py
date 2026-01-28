@@ -36,8 +36,10 @@ class TestOkinaBehavior:
         changes = {"added": 2, "changed": 1, "removed": 0}
         message = formatter.format_change_message(changes, "test-source")
 
-        # 人間の確認を促す表現が含まれていることを確認
-        assert "確認" in message or "詳細" in message
+        # 事実のみを伝え、判断は人間に委ねることを確認
+        # メッセージが生成されることを確認
+        assert message != ""
+        assert "変化を検知しました" in message
 
         # 判断的な表現が含まれていないことを確認
         judgmental_words = ["すべき", "必要", "推奨", "おすすめ"]
@@ -53,8 +55,13 @@ class TestOkinaBehavior:
         message = formatter.format_change_message(changes, "test-source")
 
         # 翁らしい表現が含まれていることを確認
-        assert "🏮 Okina（翁）" in message
-        assert "詳細は okina history で確認できます" in message
+        assert "変化を検知しました" in message
+
+        # 絵文字が含まれていないことを確認（端末互換性のため）
+        # 基本的なASCII範囲外の装飾文字をチェック
+        emoji_chars = ["🏮", "📅", "🔍", "✨", "🔄", "🗑️", "⚠️"]
+        for emoji in emoji_chars:
+            assert emoji not in message, f"Message should not contain emoji '{emoji}'"
 
         # 過度に主張的でないことを確認
         assertive_words = ["重要", "緊急", "至急", "必須"]
@@ -84,8 +91,9 @@ class TestOkinaBehavior:
             "connection", "Network timeout", "test-source"
         )
 
-        # 継続性を示す表現が含まれていることを確認
-        assert "監視は継続" in error_message or "見守り続け" in error_message
+        # エラーメッセージが生成されることを確認
+        assert error_message != ""
+        assert "エラーを検知しました" in error_message
 
         # パニックを起こさない表現であることを確認
         panic_words = ["危険", "緊急事態", "システム停止", "致命的"]
@@ -107,15 +115,14 @@ class TestMessageFormatter:
         message = formatter.format_change_message(changes, "fortinet-docs", timestamp)
 
         # 必要な要素が含まれていることを確認
-        assert "🏮 Okina（翁）からのお知らせ" in message
-        assert "2026-01-06 14:30:00" in message
-        assert "🔍 ソース: fortinet-docs" in message
-        assert "✨ 新規追加: 2件" in message
-        assert "🔄 内容変更: 1件" in message
-        assert "詳細は okina history で確認できます" in message
+        assert "変化を検知しました" in message
+        assert "2026-01-06 14:30" in message
+        assert "ソース: fortinet-docs" in message
+        assert "新規追加: 2件" in message
+        assert "内容変更: 1件" in message
 
         # 削除がない場合は削除の行が含まれないことを確認
-        assert "🗑️ 削除" not in message
+        assert "削除" not in message
 
     def test_format_error_message_basic(self):
         """基本的なエラーメッセージのフォーマットテスト"""
@@ -126,12 +133,10 @@ class TestMessageFormatter:
         )
 
         # 必要な要素が含まれていることを確認
-        assert "🏮 Okina（翁）からのお知らせ" in error_message
-        assert "🔍 ソース: test-source" in error_message
-        assert "⚠️ 問題が発生しましたが、監視は継続しています" in error_message
+        assert "エラーを検知しました" in error_message
+        assert "ソース: test-source" in error_message
         assert "種類: connection_error" in error_message
         assert "詳細: Failed to connect to API" in error_message
-        assert "翁は静かに見守り続けます" in error_message
 
 
 class TestSlackNotifier:
@@ -261,10 +266,10 @@ class TestCoverageImprovement:
         message = formatter.format_change_message(changes, "test-source")
         
         # 全ての変化タイプが含まれることを確認
-        assert "✨ 新規追加: 3件" in message
-        assert "🔄 内容変更: 2件" in message
-        assert "🗑️ 削除: 1件" in message
-        assert "🏮 Okina（翁）からのお知らせ" in message
+        assert "新規追加: 3件" in message
+        assert "内容変更: 2件" in message
+        assert "削除: 1件" in message
+        assert "変化を検知しました" in message
 
     @pytest.mark.okina
     def test_slack_notifier_http_error_handling(self):
