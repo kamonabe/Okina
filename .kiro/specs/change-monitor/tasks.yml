@@ -3,18 +3,21 @@
 metadata:
   title: "Okina変化監視システム"
   feature: "change-monitor"
-  status: "draft"
+  status: "completed"
   created: "2025-12-22"
-  updated: "2025-12-22"
+  updated: "2026-01-28"
+  completed: "2026-01-28"
   version: "1.0.0"
+  validation_passed: true
 
 implementation-tasks:
   - id: "TASK-001"
     title: "ConfigManagerクラスの実装"
     priority: "high"
-    status: "pending"
+    status: "completed"
     estimated-hours: 2
     dependencies: []
+    completed: "2026-01-28"
     description: |
       設定ファイル（YAML）の読み込みと検証を行う
       ConfigManagerクラスを実装する。
@@ -37,9 +40,10 @@ implementation-tasks:
   - id: "TASK-002"
     title: "DataWatcherクラスの実装"
     priority: "high"
-    status: "pending"
+    status: "completed"
     estimated-hours: 2
     dependencies: []
+    completed: "2026-01-28"
     description: |
       正規化データファイルの監視と検出を行う
       DataWatcherクラスを実装する。
@@ -62,9 +66,10 @@ implementation-tasks:
   - id: "TASK-003"
     title: "ProcessControllerクラスの実装"
     priority: "high"
-    status: "pending"
+    status: "completed"
     estimated-hours: 3
     dependencies: ["TASK-001", "TASK-002"]
+    completed: "2026-01-28"
     description: |
       差分抽出と通知の統合制御を行う
       ProcessControllerクラスを実装する。
@@ -87,9 +92,10 @@ implementation-tasks:
   - id: "TASK-004"
     title: "ErrorHandlerクラスの実装"
     priority: "high"
-    status: "pending"
+    status: "completed"
     estimated-hours: 2
     dependencies: []
+    completed: "2026-01-28"
     description: |
       エラー処理と異常通知を統合管理する
       ErrorHandlerクラスを実装する。
@@ -112,9 +118,10 @@ implementation-tasks:
   - id: "TASK-005"
     title: "ChangeMonitorクラスの実装"
     priority: "high"
-    status: "pending"
+    status: "completed"
     estimated-hours: 4
     dependencies: ["TASK-001", "TASK-002", "TASK-003", "TASK-004"]
+    completed: "2026-01-28"
     description: |
       変化監視システム全体を統合管理する
       ChangeMonitorクラスを実装する。
@@ -186,9 +193,10 @@ implementation-tasks:
   - id: "TASK-008"
     title: "設定統合とドキュメント更新"
     priority: "medium"
-    status: "pending"
+    status: "completed"
     estimated-hours: 2
     dependencies: ["TASK-005"]
+    completed: "2026-01-28"
     description: |
       変化監視システムの設定をsettings.yml.sampleに統合し、
       ドキュメントを更新する。
@@ -212,9 +220,10 @@ testing-tasks:
   - id: "TEST-001"
     title: "ユニットテストの実装"
     priority: "high"
-    status: "pending"
+    status: "completed"
     estimated-hours: 3
     dependencies: ["TASK-001", "TASK-002", "TASK-003", "TASK-004", "TASK-005"]
+    completed: "2026-01-28"
     description: |
       変化監視システムの各コンポーネントのユニットテストを実装する。
     test-files:
@@ -232,9 +241,10 @@ testing-tasks:
   - id: "TEST-002"
     title: "統合テストの実装"
     priority: "high"
-    status: "pending"
+    status: "completed"
     estimated-hours: 3
     dependencies: ["TASK-005"]
+    completed: "2026-01-28"
     description: |
       変化監視システム全体の統合テストを実装する。
     test-files:
