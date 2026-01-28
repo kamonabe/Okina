@@ -46,6 +46,18 @@ notifications:
 output:  # 出力フォーマットの設定
   default_mode: "normal"  # "normal" または "verbose"
   max_items_per_notification: 10  # 1回の通知で表示する最大アイテム数
+
+monitoring:  # 変化監視システム設定
+  enabled: true  # 変化監視を有効にする
+  check_interval: 300  # チェック間隔（秒）、cronで実行する場合は不要
+  
+  processing:
+    parallel: false  # 並列処理の有効化（将来の拡張用）
+    timeout_seconds: 300  # 処理タイムアウト（秒）
+    
+  error_handling:
+    continue_on_error: true  # エラー時も他のソースの処理を継続
+    notify_on_error: true  # エラー時に通知を送信
   
 logging:  # ログ設定
   level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL

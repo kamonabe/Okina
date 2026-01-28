@@ -7,6 +7,7 @@
 ## 📋 目次
 
 - [基本的な使用例](#基本的な使用例)
+- [変化監視システム](#変化監視システム)
 - [通知メッセージ例](#通知メッセージ例)
 - [設定ファイル例](#設定ファイル例)
 - [cron設定例](#cron設定例)
@@ -84,6 +85,77 @@ $ okina history --limit 5
 
 2025-12-18 09:00:00 | fortinet-docs
   新規: 3件, 変更: 0件, 削除: 1件
+```
+
+---
+
+## 変化監視システム
+
+### Pythonコードからの使用
+
+```python
+from okina.monitor import ChangeMonitor
+
+# 変化監視の実行
+monitor = ChangeMonitor(config_path="settings.yml")
+result = monitor.run()
+
+if result:
+    print("変化監視が正常に完了しました")
+else:
+    print("変化監視でエラーが発生しました")
+```
+
+### 監視結果の詳細取得
+
+```python
+from okina.monitor import ChangeMonitor
+
+monitor = ChangeMonitor(config_path="settings.yml")
+result = monitor.watch_changes()
+
+print(f"処理されたソース数: {result['sources_processed']}")
+print(f"変化があったソース数: {result['sources_with_changes']}")
+print(f"合計変化数: {result['total_changes']}")
+print(f"処理時間: {result['processing_time']:.2f}秒")
+
+if result['errors']:
+    print(f"エラー: {len(result['errors'])}件")
+    for error in result['errors']:
+        print(f"  - {error}")
+```
+
+### 複数ソースの処理例
+
+```python
+# data/input/ に複数の正規化データファイルがある場合
+# fortinet.jsonl, cisco.jsonl, vmware.jsonl
+
+monitor = ChangeMonitor(config_path="settings.yml")
+result = monitor.watch_changes()
+
+# 各ソースが独立して処理される
+# 一つのソースでエラーが発生しても、他のソースは処理される
+```
+
+### エラーハンドリング例
+
+```python
+from okina.monitor import ChangeMonitor
+from okina.exceptions import MonitorError
+
+try:
+    monitor = ChangeMonitor(config_path="settings.yml")
+    result = monitor.run()
+    
+except FileNotFoundError as e:
+    print(f"設定ファイルが見つかりません: {e}")
+    
+except MonitorError as e:
+    print(f"変化監視エラー: {e}")
+    
+except Exception as e:
+    print(f"予期しないエラー: {e}")
 ```
 
 ---

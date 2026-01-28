@@ -12,13 +12,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `NotificationManager`: 通知の統合管理クラス
   - `MessageFormatter`: 翁らしいメッセージフォーマット生成
   - `SlackNotifier`: Slack API経由での通知送信
+- 差分抽出システムの実装
+  - `DiffAnalyzer`: 差分抽出の統合管理クラス
+  - `DataLoader`: JSON Lines形式の正規化データ読み込み
+  - `ComparisonEngine`: IDベース比較と内容変更検出
+  - `HistoryManager`: 履歴データの保存と管理
+- 変化監視システムの実装
+  - `ChangeMonitor`: 変化監視の統合管理クラス
+  - `ConfigManager`: YAML設定ファイルの読み込みと検証
+  - `DataWatcher`: 正規化データファイルの監視と検出
+  - `ProcessController`: 差分抽出と通知の統合制御
+  - `ErrorHandler`: エラー処理と異常通知
 - 翁らしい静かで簡潔なメッセージ形式
   - 絵文字なし、事実ベースの内容
   - 判断的でない表現
 - 環境変数による機密情報管理（`env:` プレフィックス）
 - エラー時継続性の実装（翁らしく静かに処理を続ける）
-- 包括的なテストスイート（カバレッジ93%）
-  - 翁らしさを検証する21件のテスト
+- 複数ソースの独立処理（一部失敗でも他は継続）
+- 包括的なテストスイート（カバレッジ90%）
+  - 通知システム: 21件のテスト（カバレッジ94%）
+  - 差分抽出システム: 24件のテスト（カバレッジ92%）
+  - 変化監視システム: 25件のテスト（カバレッジ86%）
   - ユニットテスト、統合テスト
 
 ### Changed
