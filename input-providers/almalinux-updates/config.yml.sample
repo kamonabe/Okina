@@ -1,0 +1,40 @@
+# AlmaLinux更新プロバイダー設定サンプル
+
+# DNF設定
+dnf:
+  # コマンドタイムアウト（秒）
+  timeout: 300
+  # ネットワークタイムアウト（秒）
+  network_timeout: 60
+
+# リポジトリ設定
+repositories:
+  # 監視対象リポジトリ（空の場合は全リポジトリ）
+  include: []
+  # 除外するリポジトリ
+  exclude: []
+
+# 更新タイプ
+update_types:
+  - security
+  - bugfix
+  - enhancement
+
+# 重要度設定
+severity:
+  # 最小重要度レベル（low, moderate, important, critical）
+  threshold: "low"
+
+# 実行設定
+execution:
+  # ドライランモード
+  dry_run: false
+  # ロックファイルのパス
+  lock_file: "/tmp/almalinux-updates-provider.lock"
+
+# ログ設定
+logging:
+  # エラーログファイルのパス
+  error_log: "error.log"
+  # ログレベル（DEBUG, INFO, WARNING, ERROR, CRITICAL）
+  level: "INFO"

@@ -1,0 +1,936 @@
+# 設計書: AlmaLinux更新検知Input Provider
+
+metadata:
+  title: "AlmaLinux更新検知Input Provider"
+  feature: "almalinux-updates-provider"
+  status: "draft"
+  created: "2025-02-04"
+  updated: "2025-02-04"
+  version: "1.0.0"
+  last_validated: null
+  validation_passed: null
+
+architecture:
+  overview: |
+    AlmaLinux更新検知Input Providerは、AlmaLinux（RHEL系）システムで現在インストールされているパッケージ情報（rpm）と
+    利用可能な更新情報（dnf）を統合的に分析し、Okina標準形式（okina.item.v1）で出力するPython 3.10+アプリケーションです。
+    翁らしい静かな動作を重視し、正確な差分検知により人間の判断を支援する情報提供に徹します。
+    
+    システムは5つの主要コンポーネントで構成され、cron/手動実行から標準出力までの一連の処理を実行します。
+  
+  components:
+    - name: "ConfigManager"
+      type: "class"
+      responsibility: "YAML設定ファイルの読み込みと管理、デフォルト値の提供"
+      dependencies: ["yaml"]
+    
+    - name: "DNFCommandRunner"
+      type: "class"
+      responsibility: "タイムアウト制御付きでdnf/rpmコマンドを実行"
+      dependencies: ["subprocess"]
+    
+    - name: "SystemAnalyzer"
+      type: "class"
+      responsibility: "現在のパッケージ状況と利用可能な更新を統合分析"
+      dependencies: ["DNFCommandRunner"]
+    
+    - name: "DataNormalizer"
+      type: "class"
+      responsibility: "システム更新状況をOkina標準形式（okina.item.v1）に変換"
+      dependencies: []
+    
+    - name: "ErrorHandler"
+      type: "class"
+      responsibility: "翁らしい静かなエラー処理、ログファイルへの記録"
+      dependencies: ["logging"]
+  
+  data-flow:
+    - from: "cron/手動実行"
+      to: "main.py"
+      description: "プロバイダーの起動"
+    
+    - from: "main.py"
+      to: "ConfigManager"
+      description: "設定ファイルの読み込み"
+    
+    - from: "main.py"
+      to: "DNFCommandRunner"
+      description: "dnf/rpmコマンドの実行"
+    
+    - from: "DNFCommandRunner"
+      to: "SystemAnalyzer"
+      description: "コマンド出力の解析と統合分析"
+    
+    - from: "SystemAnalyzer"
+      to: "DataNormalizer"
+      description: "システム更新状況の正規化"
+    
+    - from: "DataNormalizer"
+      to: "標準出力"
+      description: "JSON Lines形式での出力"
+    
+    - from: "各コンポーネント"
+      to: "ErrorHandler"
+      description: "エラー発生時のログ記録"
+
+modules:
+  - name: "ConfigManager"
+    path: "src/almalinux_updates/config_manager.py"
+    description: |
+      YAML設定ファイルの読み込みと管理を担当。
+      設定ファイルが存在しない場合はデフォルト値を提供。
+    
+    functions:
+      - name: "__init__"
+        parameters:
+          - name: "config_path"
+            type: "str"
+            description: "設定ファイルのパス（デフォルト: config.yml）"
+        returns:
+          type: "None"
+          description: "初期化"
+        raises:
+          - "ConfigError: 設定ファイルの構文エラー"
+      
+      - name: "get_timeout"
+        parameters: []
+        returns:
+          type: "int"
+          description: "dnfコマンドのタイムアウト値（秒）"
+        raises: []
+      
+      - name: "get_repositories"
+        parameters: []
+        returns:
+          type: "List[str]"
+          description: "監視対象リポジトリリスト"
+        raises: []
+      
+      - name: "get_update_types"
+        parameters: []
+        returns:
+          type: "List[str]"
+          description: "監視対象更新タイプ（security, bugfix, enhancement）"
+        raises: []
+      
+      - name: "get_severity_threshold"
+        parameters: []
+        returns:
+          type: "str"
+          description: "最小重要度レベル（low, moderate, important, critical）"
+        raises: []
+      
+      - name: "is_dry_run"
+        parameters: []
+        returns:
+          type: "bool"
+          description: "ドライランモードかどうか"
+        raises: []
+  
+  - name: "DNFCommandRunner"
+    path: "src/almalinux_updates/dnf_command_runner.py"
+    description: |
+      タイムアウト制御付きでdnf/rpmコマンドを実行。
+      subprocess.run()のtimeoutパラメータを使用してハング状態を防ぐ。
+    
+    functions:
+      - name: "__init__"
+        parameters:
+          - name: "timeout"
+            type: "int"
+            description: "タイムアウト値（秒、デフォルト: 300）"
+        returns:
+          type: "None"
+          description: "初期化"
+        raises: []
+      
+      - name: "check_updates"
+        parameters: []
+        returns:
+          type: "Tuple[bool, str, str]"
+          description: "(success, stdout, stderr)"
+        raises:
+          - "TimeoutExpired: タイムアウト発生"
+      
+      - name: "get_updateinfo"
+        parameters: []
+        returns:
+          type: "Tuple[bool, str, str]"
+          description: "(success, stdout, stderr)"
+        raises:
+          - "TimeoutExpired: タイムアウト発生"
+      
+      - name: "get_installed_packages"
+        parameters: []
+        returns:
+          type: "Tuple[bool, str, str]"
+          description: "(success, stdout, stderr)"
+        raises:
+          - "TimeoutExpired: タイムアウト発生"
+      
+      - name: "get_dnf_history"
+        parameters: []
+        returns:
+          type: "Tuple[bool, str, str]"
+          description: "(success, stdout, stderr)"
+        raises:
+          - "TimeoutExpired: タイムアウト発生"
+      
+      - name: "_run_command"
+        parameters:
+          - name: "cmd"
+            type: "List[str]"
+            description: "実行するコマンド"
+        returns:
+          type: "Tuple[bool, str, str]"
+          description: "(success, stdout, stderr)"
+        raises:
+          - "TimeoutExpired: タイムアウト発生"
+  
+  - name: "SystemAnalyzer"
+    path: "src/almalinux_updates/system_analyzer.py"
+    description: |
+      現在のパッケージ状況と利用可能な更新を統合分析。
+      各パッケージを「current」「update_available」「recently_updated」のいずれかに分類。
+    
+    functions:
+      - name: "__init__"
+        parameters: []
+        returns:
+          type: "None"
+          description: "初期化"
+        raises: []
+      
+      - name: "get_current_package_status"
+        parameters: []
+        returns:
+          type: "Dict[str, PackageInfo]"
+          description: "現在インストールされているパッケージ情報"
+        raises: []
+      
+      - name: "get_available_updates"
+        parameters: []
+        returns:
+          type: "Dict[str, PackageInfo]"
+          description: "利用可能な更新情報"
+        raises: []
+      
+      - name: "analyze_system_status"
+        parameters: []
+        returns:
+          type: "List[SystemUpdateStatus]"
+          description: "統合分析されたシステム更新状況"
+        raises: []
+      
+      - name: "_parse_rpm_output"
+        parameters:
+          - name: "output"
+            type: "str"
+            description: "rpm -qaの出力"
+        returns:
+          type: "Dict[str, PackageInfo]"
+          description: "解析されたパッケージ情報"
+        raises: []
+      
+      - name: "_parse_dnf_history"
+        parameters:
+          - name: "output"
+            type: "str"
+            description: "dnf historyの出力"
+        returns:
+          type: "Dict[str, datetime]"
+          description: "パッケージ名とインストール日時のマッピング"
+        raises: []
+      
+      - name: "_is_recently_updated"
+        parameters:
+          - name: "install_date"
+            type: "datetime"
+            description: "インストール日時"
+        returns:
+          type: "bool"
+          description: "過去7日以内かどうか"
+        raises: []
+      
+      - name: "_is_kernel_update"
+        parameters:
+          - name: "package_name"
+            type: "str"
+            description: "パッケージ名"
+        returns:
+          type: "bool"
+          description: "カーネル関連パッケージかどうか"
+        raises: []
+  
+  - name: "DataNormalizer"
+    path: "src/almalinux_updates/data_normalizer.py"
+    description: |
+      システム更新状況をOkina標準形式（okina.item.v1）に変換。
+      一意IDの生成、優先度マッピング、タグ生成を行う。
+    
+    functions:
+      - name: "__init__"
+        parameters: []
+        returns:
+          type: "None"
+          description: "初期化"
+        raises: []
+      
+      - name: "normalize_system_status"
+        parameters:
+          - name: "status_list"
+            type: "List[SystemUpdateStatus]"
+            description: "システム更新状況リスト"
+        returns:
+          type: "List[Dict[str, Any]]"
+          description: "okina.item.v1形式のリスト"
+        raises: []
+      
+      - name: "generate_item_id"
+        parameters:
+          - name: "status"
+            type: "SystemUpdateStatus"
+            description: "システム更新状況"
+        returns:
+          type: "str"
+          description: "一意のアイテムID"
+        raises: []
+      
+      - name: "_map_severity_to_priority"
+        parameters:
+          - name: "is_security"
+            type: "bool"
+            description: "セキュリティ更新かどうか"
+          - name: "update_type"
+            type: "str"
+            description: "更新タイプ"
+        returns:
+          type: "str"
+          description: "Okina優先度（high, medium, low, info）"
+        raises: []
+      
+      - name: "_generate_tags"
+        parameters:
+          - name: "status"
+            type: "SystemUpdateStatus"
+            description: "システム更新状況"
+        returns:
+          type: "List[str]"
+          description: "タグリスト"
+        raises: []
+      
+      - name: "_should_output_item"
+        parameters:
+          - name: "status"
+            type: "SystemUpdateStatus"
+            description: "システム更新状況"
+        returns:
+          type: "bool"
+          description: "出力対象かどうか（current状態は出力しない）"
+        raises: []
+  
+  - name: "ErrorHandler"
+    path: "src/almalinux_updates/error_handler.py"
+    description: |
+      翁らしい静かなエラー処理を実装。
+      エラーはログファイルにのみ記録し、自動復旧は行わない。
+    
+    functions:
+      - name: "__init__"
+        parameters:
+          - name: "log_file"
+            type: "str"
+            description: "ログファイルのパス（デフォルト: error.log）"
+        returns:
+          type: "None"
+          description: "初期化"
+        raises: []
+      
+      - name: "log_error"
+        parameters:
+          - name: "error"
+            type: "Exception"
+            description: "発生したエラー"
+          - name: "context"
+            type: "str"
+            description: "エラーのコンテキスト"
+        returns:
+          type: "None"
+          description: "エラーをログに記録"
+        raises: []
+      
+      - name: "log_warning"
+        parameters:
+          - name: "message"
+            type: "str"
+            description: "警告メッセージ"
+          - name: "context"
+            type: "str"
+            description: "警告のコンテキスト"
+        returns:
+          type: "None"
+          description: "警告をログに記録"
+        raises: []
+      
+      - name: "handle_dnf_timeout"
+        parameters:
+          - name: "timeout_seconds"
+            type: "int"
+            description: "タイムアウト時間（秒）"
+        returns:
+          type: "None"
+          description: "dnfタイムアウトを処理"
+        raises: []
+      
+      - name: "handle_parse_error"
+        parameters:
+          - name: "line"
+            type: "str"
+            description: "解析に失敗した行"
+          - name: "error"
+            type: "Exception"
+            description: "発生したエラー"
+        returns:
+          type: "None"
+          description: "解析エラーを処理（該当行をスキップ）"
+        raises: []
+      
+      - name: "should_continue_on_error"
+        parameters:
+          - name: "error_type"
+            type: "str"
+            description: "エラータイプ"
+        returns:
+          type: "bool"
+          description: "処理継続可否"
+        raises: []
+
+correctness-properties:
+  - id: "P1"
+    title: "システム状況分析の完全性"
+    type: "invariant"
+    description: |
+      任意の現在のパッケージ状況と利用可能な更新情報に対して、
+      各パッケージの正確な状態（current, update_available, recently_updated）が判定されなければならない。
+    validates: ["AC-001", "AC-004", "AC-011"]
+    test-strategy: "property-based"
+    implementation:
+      framework: "hypothesis"
+      strategy: "st.dictionaries(st.text(), st.builds(PackageInfo))"
+      assertion: "全パッケージが3つの状態のいずれかに分類される"
+  
+  - id: "P2"
+    title: "セキュリティ情報統合の正確性"
+    type: "invariant"
+    description: |
+      任意のdnf updateinfo出力とcheck-update出力の組み合わせに対して、
+      セキュリティ更新が正しく識別され、CVE情報と重要度が適切に統合されなければならない。
+    validates: ["AC-002"]
+    test-strategy: "property-based"
+    implementation:
+      framework: "hypothesis"
+      strategy: "st.text(min_size=1)"
+      assertion: "セキュリティ更新のis_security=true, CVE情報が含まれる"
+  
+  - id: "P3"
+    title: "終了コードの一貫性"
+    type: "invariant"
+    description: |
+      任意の実行条件（成功、失敗、エラー）に対して、
+      標準Unix終了コード（0=成功、1=一般エラー、2=設定エラー）が返されなければならない。
+    validates: ["AC-012"]
+    test-strategy: "integration"
+    implementation:
+      framework: "pytest"
+      strategy: "subprocess.run()"
+      assertion: "終了コードが0, 1, 2のいずれか"
+  
+  - id: "P4"
+    title: "タイムアウト制御の確実性"
+    type: "invariant"
+    description: |
+      任意のdnf/rpmコマンド実行に対して、
+      設定されたタイムアウト値内でプロセスが終了し、タイムアウト時は適切にプロセスが停止されなければならない。
+    validates: ["AC-013"]
+    test-strategy: "property-based"
+    implementation:
+      framework: "hypothesis"
+      strategy: "st.integers(min_value=1, max_value=600)"
+      assertion: "タイムアウト時間内に終了、またはTimeoutExpired例外"
+  
+  - id: "P5"
+    title: "データ正規化の往復特性"
+    type: "invariant"
+    description: |
+      任意の有効なSystemUpdateStatusオブジェクトに対して、
+      okina.item.v1形式に正規化した後、必要な情報が保持され、適切なIDが生成されなければならない。
+    validates: ["AC-005", "AC-006", "AC-011"]
+    test-strategy: "property-based"
+    implementation:
+      framework: "hypothesis"
+      strategy: "st.builds(SystemUpdateStatus)"
+      assertion: "正規化後も元の情報が保持される、IDが正しい形式"
+  
+  - id: "P6"
+    title: "カーネル更新の再起動フラグ"
+    type: "invariant"
+    description: |
+      任意のパッケージリストに対して、
+      カーネル関連パッケージ（kernel, kernel-*）が含まれる場合、requires_rebootフラグがtrueに設定されなければならない。
+    validates: ["AC-003"]
+    test-strategy: "property-based"
+    implementation:
+      framework: "hypothesis"
+      strategy: "st.lists(st.text())"
+      assertion: "kernel関連パッケージ → requires_reboot=true"
+  
+  - id: "P7"
+    title: "フィルタリング機能の正確性"
+    type: "invariant"
+    description: |
+      任意の設定（リポジトリ、更新タイプ、重要度）とパッケージリストに対して、
+      設定に合致しないパッケージが除外され、合致するパッケージのみが出力されなければならない。
+    validates: ["AC-009"]
+    test-strategy: "property-based"
+    implementation:
+      framework: "hypothesis"
+      strategy: "st.lists(st.builds(SystemUpdateStatus))"
+      assertion: "フィルタ条件に合致するパッケージのみ出力"
+  
+  - id: "P8"
+    title: "エラー処理の継続性"
+    type: "invariant"
+    description: |
+      任意の解析エラーや部分的な失敗に対して、
+      有効なデータは処理を継続し、エラーは静かにログに記録され、自動復旧は行われてはならない。
+    validates: ["AC-008", "AC-015"]
+    test-strategy: "integration"
+    implementation:
+      framework: "pytest"
+      strategy: "モックエラー注入"
+      assertion: "エラー発生時も処理継続、ログ記録、自動復旧なし"
+  
+  - id: "P9"
+    title: "静かな動作の保証"
+    type: "invariant"
+    description: |
+      任意の正常実行に対して、
+      標準エラー出力に不要なメッセージが出力されず、推奨アクションや警告が含まれてはならない。
+    validates: ["AC-010"]
+    test-strategy: "integration"
+    implementation:
+      framework: "pytest"
+      strategy: "subprocess.run() stderr確認"
+      assertion: "stderr が空、または最小限のエラーメッセージのみ"
+  
+  - id: "P10"
+    title: "設定処理の堅牢性"
+    type: "invariant"
+    description: |
+      任意の設定ファイル状態（存在しない、無効、部分的）に対して、
+      適切なデフォルト値が使用され、処理が継続されなければならない。
+    validates: ["AC-009"]
+    test-strategy: "property-based"
+    implementation:
+      framework: "hypothesis"
+      strategy: "st.one_of(st.none(), st.text(), st.dictionaries(...))"
+      assertion: "設定不在/無効時もデフォルト値で継続"
+  
+  - id: "P11"
+    title: "排他制御の確実性"
+    type: "invariant"
+    description: |
+      任意の複数インスタンス同時実行に対して、
+      ファイルロックにより1つのインスタンスのみが実行され、他は適切に終了しなければならない。
+    validates: ["AC-012"]
+    test-strategy: "integration"
+    implementation:
+      framework: "pytest"
+      strategy: "複数プロセス起動"
+      assertion: "1つのみ実行、他は終了コード0で終了"
+  
+  - id: "P13"
+    title: "状態変化の正確な検知"
+    type: "invariant"
+    description: |
+      任意のパッケージ状態変化（新規更新、適用済み、変化なし）に対して、
+      適切なIDとstatusが設定され、Okinaによる正確な差分検知が可能でなければならない。
+    validates: ["AC-007"]
+    test-strategy: "property-based"
+    implementation:
+      framework: "hypothesis"
+      strategy: "st.tuples(st.text(), st.sampled_from(['update_available', 'recently_updated', 'current']))"
+      assertion: "状態変化時にID変更、差分検知可能"
+
+data-structures:
+  - name: "PackageInfo"
+    type: "dataclass"
+    schema:
+      name:
+        type: "str"
+        required: true
+        description: "パッケージ名"
+      version:
+        type: "str"
+        required: true
+        description: "バージョン"
+      repository:
+        type: "str"
+        required: false
+        default: ""
+        description: "リポジトリ名"
+      install_date:
+        type: "datetime"
+        required: false
+        default: null
+        description: "インストール日時"
+  
+  - name: "SystemUpdateStatus"
+    type: "dataclass"
+    schema:
+      package_name:
+        type: "str"
+        required: true
+        description: "パッケージ名"
+      current_version:
+        type: "str"
+        required: true
+        description: "現在のバージョン"
+      available_version:
+        type: "str"
+        required: false
+        default: null
+        description: "利用可能なバージョン"
+      update_type:
+        type: "str"
+        required: false
+        default: "unknown"
+        description: "更新タイプ（security, bugfix, enhancement）"
+      install_date:
+        type: "datetime"
+        required: false
+        default: null
+        description: "インストール日時"
+      is_security:
+        type: "bool"
+        required: false
+        default: false
+        description: "セキュリティ更新かどうか"
+      cve_ids:
+        type: "List[str]"
+        required: false
+        default: []
+        description: "CVE識別子リスト"
+      status:
+        type: "str"
+        required: false
+        default: "current"
+        description: "パッケージ状態（current, update_available, recently_updated）"
+  
+  - name: "okina.item.v1"
+    type: "dict"
+    schema:
+      schema:
+        type: "str"
+        required: true
+        description: "スキーマバージョン（okina.item.v1）"
+      id:
+        type: "str"
+        required: true
+        description: "一意識別子（almalinux:package:version:status）"
+      title:
+        type: "str"
+        required: true
+        description: "アイテムのタイトル"
+      description:
+        type: "str"
+        required: true
+        description: "アイテムの説明"
+      source:
+        type: "str"
+        required: true
+        description: "ソース（almalinux-updates-provider）"
+      timestamp:
+        type: "str"
+        required: true
+        description: "タイムスタンプ（ISO 8601形式）"
+      priority:
+        type: "str"
+        required: true
+        description: "優先度（high, medium, low, info）"
+      tags:
+        type: "List[str]"
+        required: true
+        description: "タグリスト"
+      metadata:
+        type: "dict"
+        required: true
+        description: "メタデータ"
+
+error-handling:
+  - error: "TimeoutExpired"
+    handling: "continue"
+    message: "dnf command timeout after {timeout}s"
+    log-level: "error"
+  
+  - error: "ParseError"
+    handling: "continue"
+    message: "Skipping malformed line: {line}"
+    log-level: "warning"
+  
+  - error: "ConfigError"
+    handling: "stop"
+    message: "Configuration file syntax error"
+    log-level: "error"
+    exit-code: 2
+  
+  - error: "PermissionError"
+    handling: "stop"
+    message: "Insufficient permissions"
+    log-level: "error"
+    exit-code: 1
+  
+  - error: "DiskFullError"
+    handling: "stop"
+    message: "Disk space insufficient"
+    log-level: "error"
+    exit-code: 1
+  
+  - error: "LockFileError"
+    handling: "stop"
+    message: "Another instance is running"
+    log-level: "info"
+    exit-code: 0
+
+configuration:
+  - name: "dnf.timeout"
+    type: "int"
+    required: false
+    default: 300
+    description: "dnfコマンドのタイムアウト（秒）"
+    validation:
+      - "1 <= timeout <= 3600"
+  
+  - name: "dnf.network_timeout"
+    type: "int"
+    required: false
+    default: 60
+    description: "ネットワークタイムアウト（秒）"
+    validation:
+      - "1 <= network_timeout <= 600"
+  
+  - name: "repositories.include"
+    type: "list"
+    required: false
+    default: []
+    description: "監視対象リポジトリ（空の場合は全リポジトリ）"
+    validation: []
+  
+  - name: "repositories.exclude"
+    type: "list"
+    required: false
+    default: []
+    description: "除外するリポジトリ"
+    validation: []
+  
+  - name: "update_types"
+    type: "list"
+    required: false
+    default: ["security", "bugfix", "enhancement"]
+    description: "監視対象更新タイプ"
+    validation:
+      - "各要素が security, bugfix, enhancement のいずれか"
+  
+  - name: "severity.threshold"
+    type: "str"
+    required: false
+    default: "low"
+    description: "最小重要度レベル"
+    validation:
+      - "low, moderate, important, critical のいずれか"
+  
+  - name: "execution.dry_run"
+    type: "bool"
+    required: false
+    default: false
+    description: "ドライランモード"
+    validation: []
+  
+  - name: "execution.lock_file"
+    type: "str"
+    required: false
+    default: "/tmp/almalinux-updates-provider.lock"
+    description: "ロックファイルのパス"
+    validation: []
+  
+  - name: "logging.error_log"
+    type: "str"
+    required: false
+    default: "error.log"
+    description: "エラーログファイルのパス"
+    validation: []
+  
+  - name: "logging.level"
+    type: "str"
+    required: false
+    default: "INFO"
+    description: "ログレベル"
+    validation:
+      - "DEBUG, INFO, WARNING, ERROR, CRITICAL のいずれか"
+
+dependencies:
+  internal: []
+  external:
+    - name: "pyyaml"
+      version: ">=6.0"
+      purpose: "YAML設定ファイルの読み込み"
+    
+    - name: "hypothesis"
+      version: ">=6.0"
+      purpose: "プロパティベーステスト"
+
+testing-strategy:
+  property-tests:
+    - property: "P1"
+      file: "tests/test_system_analyzer_properties.py"
+      function: "test_property_system_status_completeness"
+    
+    - property: "P2"
+      file: "tests/test_system_analyzer_properties.py"
+      function: "test_property_security_info_accuracy"
+    
+    - property: "P4"
+      file: "tests/test_dnf_command_runner_properties.py"
+      function: "test_property_timeout_control"
+    
+    - property: "P5"
+      file: "tests/test_data_normalizer_properties.py"
+      function: "test_property_normalization_roundtrip"
+    
+    - property: "P6"
+      file: "tests/test_system_analyzer_properties.py"
+      function: "test_property_kernel_reboot_flag"
+    
+    - property: "P7"
+      file: "tests/test_data_normalizer_properties.py"
+      function: "test_property_filtering_accuracy"
+    
+    - property: "P10"
+      file: "tests/test_config_manager_properties.py"
+      function: "test_property_config_robustness"
+    
+    - property: "P13"
+      file: "tests/test_data_normalizer_properties.py"
+      function: "test_property_state_change_detection"
+  
+  integration-tests:
+    - validates: ["AC-001", "AC-005", "AC-011"]
+      file: "tests/test_integration.py"
+      function: "test_end_to_end_update_detection"
+    
+    - validates: ["AC-008", "AC-015"]
+      file: "tests/test_integration.py"
+      function: "test_error_handling_continuity"
+    
+    - validates: ["AC-010"]
+      file: "tests/test_integration.py"
+      function: "test_quiet_operation"
+    
+    - validates: ["AC-012"]
+      file: "tests/test_integration.py"
+      function: "test_cron_integration"
+    
+    - validates: ["AC-013"]
+      file: "tests/test_integration.py"
+      function: "test_dnf_timeout_handling"
+  
+  unit-tests:
+    - validates: ["AC-009"]
+      file: "tests/test_config_manager_unit.py"
+      function: "test_config_loading"
+    
+    - validates: ["AC-011"]
+      file: "tests/test_system_analyzer_unit.py"
+      function: "test_rpm_output_parsing"
+    
+    - validates: ["AC-011"]
+      file: "tests/test_system_analyzer_unit.py"
+      function: "test_dnf_output_parsing"
+    
+    - validates: ["AC-006"]
+      file: "tests/test_data_normalizer_unit.py"
+      function: "test_id_generation"
+    
+    - validates: ["AC-015"]
+      file: "tests/test_error_handler_unit.py"
+      function: "test_error_logging"
+
+performance:
+  targets:
+    - metric: "dnfコマンド実行時間"
+      target: "< 5分"
+      measurement: "subprocess.run() timeout"
+    
+    - metric: "全体処理時間"
+      target: "< 10分"
+      measurement: "time コマンド"
+    
+    - metric: "メモリ使用量"
+      target: "< 100MB"
+      measurement: "psutil.Process().memory_info()"
+
+security:
+  considerations:
+    - "設定ファイルに機密情報を含めない"
+    - "コマンドインジェクション対策（subprocess.run()でリスト形式使用）"
+    - "ログファイルのパーミッション設定（600）"
+    - "ロックファイルの適切な管理"
+
+resilience:
+  circuit-breaker:
+    considered: true
+    decision: "not-adopted"
+    rationale: |
+      AlmaLinux更新プロバイダーは1日1回の定期実行を想定しており、
+      連続的なリクエストが発生しないため、サーキットブレーカーは不要。
+      エラー時は静かにログ記録し、次回実行時の自然な復旧に委ねる。
+    delegated-to: null
+    future-notes: |
+      将来的にリアルタイム監視が必要になった場合は、
+      サーキットブレーカーの導入を検討する。
+  
+  notification-throttling:
+    considered: true
+    decision: "delegated"
+    rationale: |
+      通知のスロットリングはOkinaシステムが担当。
+      プロバイダーは標準形式でデータを出力するのみ。
+    delegated-to: "Okina notification system"
+    implementation: []
+  
+  baseline-reset:
+    considered: true
+    decision: "not-applicable"
+    rationale: |
+      差分検知はOkinaシステムが担当。
+      プロバイダーは現在の状況を出力するのみで、ベースライン管理は不要。
+    implementation: []
+  
+  other-considerations:
+    - consideration: "タイムアウト制御"
+      decision: "adopted"
+      rationale: |
+        dnfコマンドのハング状態を防ぐため、
+        タイムアウト制御（デフォルト5分）を実装。
+    
+    - consideration: "ファイルロック"
+      decision: "adopted"
+      rationale: |
+        複数インスタンスの同時実行を防ぐため、
+        ファイルロックを実装。
+    
+    - consideration: "エラー時の継続処理"
+      decision: "adopted"
+      rationale: |
+        部分的な失敗でも監視を継続するため、
+        継続可能エラーは処理を継続する設計。
