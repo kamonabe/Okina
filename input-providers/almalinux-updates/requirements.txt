@@ -1,0 +1,2 @@
+# AlmaLinux Updates Provider - Production Dependencies
+pyyaml>=6.0

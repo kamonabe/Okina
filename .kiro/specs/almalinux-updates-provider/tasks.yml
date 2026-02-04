@@ -1,0 +1,535 @@
+# タスクリスト: AlmaLinux更新検知Input Provider
+
+metadata:
+  title: "AlmaLinux更新検知Input Provider"
+  feature: "almalinux-updates-provider"
+  status: "pending"
+  created: "2025-02-04"
+  updated: "2025-02-04"
+  completed: null
+  version: "1.0.0"
+  last_validated: null
+  validation_passed: null
+
+tasks:
+  - id: "T1"
+    title: "プロジェクト構造の作成"
+    status: "pending"
+    priority: "high"
+    estimated-hours: 1
+    actual-hours: null
+    depends-on: []
+    validates: []
+    description: |
+      AlmaLinux更新プロバイダーの基本的なプロジェクト構造を作成する。
+      ディレクトリ、基本ファイル、依存関係の定義を含む。
+    subtasks:
+      - "Okina/input-providers/almalinux-updates/ ディレクトリ作成"
+      - "src/almalinux_updates/__init__.py 作成"
+      - "src/almalinux_updates/config_manager.py 作成"
+      - "src/almalinux_updates/error_handler.py 作成"
+      - "tests/test_config_manager.py 作成"
+      - "tests/test_error_handler.py 作成"
+      - "config.yml.sample 作成"
+      - "requirements.txt 作成"
+      - "README.md 作成"
+    files:
+      - path: "Okina/input-providers/almalinux-updates/"
+        action: "create"
+        lines: 0
+      - path: "Okina/input-providers/almalinux-updates/src/almalinux_updates/__init__.py"
+        action: "create"
+        lines: 10
+      - path: "Okina/input-providers/almalinux-updates/requirements.txt"
+        action: "create"
+        lines: 5
+      - path: "Okina/input-providers/almalinux-updates/README.md"
+        action: "create"
+        lines: 50
+    tests: []
+  
+  - id: "T2"
+    title: "ConfigManagerの実装"
+    status: "pending"
+    priority: "high"
+    estimated-hours: 2
+    actual-hours: null
+    depends-on: ["T1"]
+    validates: ["AC-009"]
+    description: |
+      YAML設定ファイルの読み込みと管理機能を実装する。
+      設定ファイルが存在しない場合はデフォルト値を提供。
+    subtasks:
+      - "ConfigManagerクラスの実装"
+      - "YAML設定ファイルの読み込み機能"
+      - "デフォルト値の設定"
+      - "get_timeout() メソッド実装"
+      - "get_repositories() メソッド実装"
+      - "get_update_types() メソッド実装"
+      - "get_severity_threshold() メソッド実装"
+      - "is_dry_run() メソッド実装"
+    files:
+      - path: "src/almalinux_updates/config_manager.py"
+        action: "create"
+        lines: 150
+    tests:
+      - "tests/test_config_manager.py"
+  
+  - id: "T3"
+    title: "ErrorHandlerの実装"
+    status: "pending"
+    priority: "high"
+    estimated-hours: 2
+    actual-hours: null
+    depends-on: ["T1"]
+    validates: ["AC-008", "AC-010", "AC-015"]
+    description: |
+      翁らしい静かなエラー処理を実装する。
+      エラーはログファイルにのみ記録し、標準エラー出力には出力しない。
+    subtasks:
+      - "ErrorHandlerクラスの実装"
+      - "ログファイルへのエラー記録機能"
+      - "log_error() メソッド実装"
+      - "log_warning() メソッド実装"
+      - "handle_dnf_timeout() メソッド実装"
+      - "handle_parse_error() メソッド実装"
+      - "should_continue_on_error() メソッド実装"
+    files:
+      - path: "src/almalinux_updates/error_handler.py"
+        action: "create"
+        lines: 120
+    tests:
+      - "tests/test_error_handler.py"
+  
+  - id: "T4"
+    title: "DNFCommandRunnerの実装"
+    status: "pending"
+    priority: "high"
+    estimated-hours: 4
+    actual-hours: null
+    depends-on: ["T2", "T3"]
+    validates: ["AC-013"]
+    description: |
+      タイムアウト制御付きでdnf/rpmコマンドを実行する機能を実装する。
+      subprocess.run()のtimeoutパラメータを使用してハング状態を防ぐ。
+    subtasks:
+      - "DNFCommandRunnerクラスの実装"
+      - "タイムアウト制御付きコマンド実行"
+      - "get_installed_packages() メソッド実装（rpm -qa）"
+      - "check_updates() メソッド実装（dnf check-update）"
+      - "get_updateinfo() メソッド実装（dnf updateinfo）"
+      - "get_dnf_history() メソッド実装（dnf history）"
+      - "_run_command() メソッド実装"
+      - "コマンド失敗時のエラー処理"
+    files:
+      - path: "src/almalinux_updates/dnf_command_runner.py"
+        action: "create"
+        lines: 200
+    tests:
+      - "tests/test_dnf_command_runner.py"
+  
+  - id: "T5"
+    title: "SystemAnalyzerの実装（基本機能）"
+    status: "pending"
+    priority: "high"
+    estimated-hours: 4
+    actual-hours: null
+    depends-on: ["T4"]
+    validates: ["AC-011"]
+    description: |
+      rpm -qa出力とdnf check-update出力の解析機能を実装する。
+      パッケージ情報を正確に抽出する。
+    subtasks:
+      - "SystemAnalyzerクラスの実装"
+      - "PackageInfoデータクラスの実装"
+      - "_parse_rpm_output() メソッド実装"
+      - "rpm出力からパッケージ名、バージョン、インストール日時を抽出"
+      - "dnf check-update出力の解析"
+      - "不正な形式の行のスキップ処理"
+    files:
+      - path: "src/almalinux_updates/system_analyzer.py"
+        action: "create"
+        lines: 250
+    tests:
+      - "tests/test_system_analyzer.py"
+  
+  - id: "T6"
+    title: "SystemAnalyzerの実装（統合分析）"
+    status: "pending"
+    priority: "high"
+    estimated-hours: 4
+    actual-hours: null
+    depends-on: ["T5"]
+    validates: ["AC-001", "AC-004", "AC-007"]
+    description: |
+      現在のパッケージ状況と利用可能な更新を統合分析する機能を実装する。
+      各パッケージを「current」「update_available」「recently_updated」のいずれかに分類。
+    subtasks:
+      - "SystemUpdateStatusデータクラスの実装"
+      - "get_current_package_status() メソッド実装"
+      - "get_available_updates() メソッド実装"
+      - "analyze_system_status() メソッド実装"
+      - "_parse_dnf_history() メソッド実装"
+      - "_is_recently_updated() メソッド実装（過去7日以内）"
+      - "_is_kernel_update() メソッド実装"
+      - "パッケージ状態の判定ロジック"
+    files:
+      - path: "src/almalinux_updates/system_analyzer.py"
+        action: "update"
+        lines: 150
+    tests:
+      - "tests/test_system_analyzer.py"
+  
+  - id: "T7"
+    title: "SystemAnalyzerの実装（セキュリティ情報）"
+    status: "pending"
+    priority: "medium"
+    estimated-hours: 3
+    actual-hours: null
+    depends-on: ["T6"]
+    validates: ["AC-002"]
+    description: |
+      dnf updateinfo出力の解析とセキュリティ情報の抽出を実装する。
+      CVE ID、重要度レベル、Advisory IDを抽出し、基本情報とマージ。
+    subtasks:
+      - "dnf updateinfo出力の解析"
+      - "セキュリティ更新の識別"
+      - "CVE情報の抽出"
+      - "重要度レベルの抽出"
+      - "Advisory IDの抽出"
+      - "セキュリティ情報と基本情報のマージ"
+    files:
+      - path: "src/almalinux_updates/system_analyzer.py"
+        action: "update"
+        lines: 100
+    tests:
+      - "tests/test_system_analyzer.py"
+  
+  - id: "T8"
+    title: "DataNormalizerの実装"
+    status: "pending"
+    priority: "high"
+    estimated-hours: 4
+    actual-hours: null
+    depends-on: ["T6"]
+    validates: ["AC-005", "AC-006", "AC-007"]
+    description: |
+      SystemUpdateStatusからokina.item.v1形式への変換機能を実装する。
+      一意ID生成、優先度マッピング、タグ生成を含む。
+    subtasks:
+      - "DataNormalizerクラスの実装"
+      - "normalize_system_status() メソッド実装"
+      - "generate_item_id() メソッド実装"
+      - "一意ID生成ロジック（almalinux:package:version:status）"
+      - "_map_severity_to_priority() メソッド実装"
+      - "_generate_tags() メソッド実装"
+      - "_should_output_item() メソッド実装（current状態は除外）"
+      - "okina.item.v1形式への変換"
+    files:
+      - path: "src/almalinux_updates/data_normalizer.py"
+        action: "create"
+        lines: 200
+    tests:
+      - "tests/test_data_normalizer.py"
+  
+  - id: "T9"
+    title: "main.pyの実装"
+    status: "pending"
+    priority: "high"
+    estimated-hours: 3
+    actual-hours: null
+    depends-on: ["T8"]
+    validates: ["AC-012"]
+    description: |
+      エントリーポイントを実装し、各コンポーネントを統合する。
+      JSON Lines形式での標準出力、終了コード設定、ファイルロックによる排他制御を含む。
+    subtasks:
+      - "main.pyの作成"
+      - "エントリーポイントの実装"
+      - "各コンポーネントの統合"
+      - "JSON Lines形式での標準出力"
+      - "終了コードの設定（0=成功、1=エラー、2=設定エラー）"
+      - "ファイルロックによる排他制御"
+      - "コマンドライン引数の処理（--dry-run等）"
+    files:
+      - path: "src/almalinux_updates/main.py"
+        action: "create"
+        lines: 150
+    tests:
+      - "tests/test_main.py"
+  
+  - id: "T10"
+    title: "プロパティベーステストの実装"
+    status: "pending"
+    priority: "medium"
+    estimated-hours: 4
+    actual-hours: null
+    depends-on: ["T9"]
+    validates: ["AC-001", "AC-002", "AC-003", "AC-005", "AC-006", "AC-007", "AC-009", "AC-013"]
+    description: |
+      Hypothesisを使用したプロパティベーステストを実装する。
+      13個の正確性プロパティのうち、主要な8個をテスト。
+    subtasks:
+      - "tests/test_system_analyzer_properties.py作成"
+      - "Property 1: システム状況分析の完全性"
+      - "Property 2: セキュリティ情報統合の正確性"
+      - "Property 6: カーネル更新の再起動フラグ"
+      - "tests/test_dnf_command_runner_properties.py作成"
+      - "Property 4: タイムアウト制御の確実性"
+      - "tests/test_data_normalizer_properties.py作成"
+      - "Property 5: データ正規化の往復特性"
+      - "Property 7: フィルタリング機能の正確性"
+      - "Property 13: 状態変化の正確な検知"
+      - "tests/test_config_manager_properties.py作成"
+      - "Property 10: 設定処理の堅牢性"
+    files:
+      - path: "tests/test_system_analyzer_properties.py"
+        action: "create"
+        lines: 150
+      - path: "tests/test_dnf_command_runner_properties.py"
+        action: "create"
+        lines: 80
+      - path: "tests/test_data_normalizer_properties.py"
+        action: "create"
+        lines: 120
+      - path: "tests/test_config_manager_properties.py"
+        action: "create"
+        lines: 80
+    tests:
+      - "tests/test_system_analyzer_properties.py"
+      - "tests/test_dnf_command_runner_properties.py"
+      - "tests/test_data_normalizer_properties.py"
+      - "tests/test_config_manager_properties.py"
+  
+  - id: "T11"
+    title: "統合テストの実装"
+    status: "pending"
+    priority: "medium"
+    estimated-hours: 3
+    actual-hours: null
+    depends-on: ["T9"]
+    validates: ["AC-001", "AC-005", "AC-008", "AC-010", "AC-011", "AC-012", "AC-013", "AC-015"]
+    description: |
+      実際のdnf/rpmコマンドを使用した統合テストを実装する。
+      エンドツーエンドのテストシナリオとエラーシナリオを含む。
+    subtasks:
+      - "tests/test_integration.py作成"
+      - "test_end_to_end_update_detection（正常な実行フロー）"
+      - "test_error_handling_continuity（エラー処理の継続性）"
+      - "test_quiet_operation（静かな動作）"
+      - "test_cron_integration（cron統合）"
+      - "test_dnf_timeout_handling（タイムアウト処理）"
+      - "モックデータを使用したテスト"
+    files:
+      - path: "tests/test_integration.py"
+        action: "create"
+        lines: 200
+    tests:
+      - "tests/test_integration.py"
+  
+  - id: "T12"
+    title: "ドキュメントの作成"
+    status: "pending"
+    priority: "medium"
+    estimated-hours: 2
+    actual-hours: null
+    depends-on: ["T9"]
+    validates: []
+    description: |
+      README.md、設定サンプル、cron設定例を作成する。
+      インストール方法、使用方法、トラブルシューティングを含む。
+    subtasks:
+      - "README.mdの完成"
+      - "インストール方法の記載"
+      - "使用方法の記載"
+      - "設定例の記載"
+      - "config.yml.sampleの作成"
+      - "cron設定例の作成"
+      - "トラブルシューティングガイドの作成"
+    files:
+      - path: "README.md"
+        action: "update"
+        lines: 150
+      - path: "config.yml.sample"
+        action: "create"
+        lines: 50
+      - path: "docs/CRON_SETUP.md"
+        action: "create"
+        lines: 50
+    tests: []
+  
+  - id: "T13"
+    title: "実行スクリプトの作成"
+    status: "pending"
+    priority: "low"
+    estimated-hours: 1
+    actual-hours: null
+    depends-on: ["T9"]
+    validates: []
+    description: |
+      実行用シェルスクリプト、環境変数設定例、ログローテーション設定、systemd-timer設定例を作成する。
+    subtasks:
+      - "実行用シェルスクリプトの作成"
+      - "環境変数の設定例"
+      - "ログローテーション設定"
+      - "systemd-timer設定例"
+    files:
+      - path: "scripts/run_almalinux_updates.sh"
+        action: "create"
+        lines: 50
+      - path: "scripts/almalinux-updates.service"
+        action: "create"
+        lines: 20
+      - path: "scripts/almalinux-updates.timer"
+        action: "create"
+        lines: 15
+      - path: "scripts/logrotate.conf"
+        action: "create"
+        lines: 15
+    tests: []
+  
+  - id: "T14"
+    title: "カバレッジ目標達成"
+    status: "pending"
+    priority: "high"
+    estimated-hours: 2
+    actual-hours: null
+    depends-on: ["T11"]
+    validates: []
+    description: |
+      カバレッジレポートを確認し、未カバー箇所のテストを追加する。
+      全体カバレッジ90%以上、重要モジュール95%以上を達成。
+    subtasks:
+      - "pytest --cov=src --cov-report=html 実行"
+      - "カバレッジレポートの確認"
+      - "未カバー箇所の特定"
+      - "エッジケースのテスト追加"
+      - "全体カバレッジ90%以上の達成"
+      - "重要モジュール95%以上の達成"
+    files: []
+    tests:
+      - "tests/test_*.py（追加テスト）"
+  
+  - id: "T15"
+    title: "コード品質チェック"
+    status: "pending"
+    priority: "medium"
+    estimated-hours: 1
+    actual-hours: null
+    depends-on: ["T14"]
+    validates: []
+    description: |
+      black、flake8、mypyによるコード品質チェックを実行し、
+      全てのエラーを修正する。
+    subtasks:
+      - "black src/ tests/ 実行"
+      - "flake8 src/ tests/ 実行"
+      - "mypy src/ 実行"
+      - "全エラーの修正"
+      - "コードレビュー準備完了"
+    files: []
+    tests: []
+
+completion-criteria:
+  - id: "CC-001"
+    description: "全テストがパス"
+    status: "pending"
+    validation: "pytest tests/ -v"
+    result: null
+  
+  - id: "CC-002"
+    description: "カバレッジ90%以上を達成"
+    status: "pending"
+    validation: "pytest --cov=src --cov-report=html --cov-fail-under=90"
+    result: null
+  
+  - id: "CC-003"
+    description: "重要モジュールのカバレッジ95%以上"
+    status: "pending"
+    validation: "pytest --cov=src/almalinux_updates/dnf_command_runner.py --cov-fail-under=95"
+    result: null
+  
+  - id: "CC-004"
+    description: "プロパティテスト100回以上の反復実行"
+    status: "pending"
+    validation: "pytest tests/test_*_properties.py -v --hypothesis-show-statistics"
+    result: null
+  
+  - id: "CC-005"
+    description: "blackフォーマット適用"
+    status: "pending"
+    validation: "black --check src/ tests/"
+    result: null
+  
+  - id: "CC-006"
+    description: "flake8エラーゼロ"
+    status: "pending"
+    validation: "flake8 src/ tests/"
+    result: null
+  
+  - id: "CC-007"
+    description: "mypy型チェック成功"
+    status: "pending"
+    validation: "mypy src/"
+    result: null
+  
+  - id: "CC-008"
+    description: "ドキュメント完成"
+    status: "pending"
+    validation: "manual"
+    result: null
+  
+  - id: "CC-009"
+    description: "手動動作確認完了"
+    status: "pending"
+    validation: "manual"
+    result: null
+
+execution-plan:
+  parallel-tasks:
+    - ["T2", "T3"]
+    - ["T10", "T11"]
+  
+  critical-path:
+    - "T1"
+    - "T4"
+    - "T5"
+    - "T6"
+    - "T8"
+    - "T9"
+    - "T11"
+    - "T14"
+    - "T15"
+  
+  total-estimated-hours: 40
+
+risks:
+  - task: "T4"
+    risk: "dnfコマンドのタイムアウト実装が複雑"
+    mitigation: "subprocess.run()のtimeoutパラメータを使用、シンプルな実装"
+    probability: "medium"
+    impact: "medium"
+  
+  - task: "T6"
+    risk: "パッケージ状態の判定ロジックが複雑"
+    mitigation: "段階的な実装、十分なテストケース"
+    probability: "medium"
+    impact: "high"
+  
+  - task: "T7"
+    risk: "dnf updateinfo出力形式の変動"
+    mitigation: "柔軟な解析ロジック、形式警告のログ記録"
+    probability: "low"
+    impact: "high"
+  
+  - task: "T10"
+    risk: "プロパティテストの実装が難しい"
+    mitigation: "Hypothesis公式ドキュメント参照、シンプルなプロパティから開始"
+    probability: "medium"
+    impact: "medium"
+  
+  - task: "T14"
+    risk: "カバレッジ目標達成が困難"
+    mitigation: "早期からテストを書く、エッジケースを意識"
+    probability: "low"
+    impact: "medium"
